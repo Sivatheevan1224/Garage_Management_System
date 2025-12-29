@@ -1,7 +1,14 @@
 import { useState } from "react"
 import { X, Lock, Mail } from "lucide-react"
 
+
+import { useNavigate } from "react-router-dom"
+import { useGarage } from "../context/GarageContext"
+
 export function LoginModal({ open, onOpenChange, onSwitchToRegister }) {
+  const { login } = useGarage()
+  const navigate = useNavigate()
+  const [error, setError] = useState("")
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -9,7 +16,14 @@ export function LoginModal({ open, onOpenChange, onSwitchToRegister }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    console.log("Login:", formData)
+    const result = login(formData.email, formData.password)
+    if (result.success) {
+        onOpenChange(false)
+        if (result.user.role === 'admin') navigate('/admin')
+        else navigate('/staff')
+    } else {
+        setError(result.message)
+    }
   }
 
   const handleChange = (e) => {
@@ -31,7 +45,14 @@ export function LoginModal({ open, onOpenChange, onSwitchToRegister }) {
           <X className="h-5 w-5" />
         </button>
 
+
         <h2 className="text-2xl font-bold text-foreground mb-8">Login to ProGarage</h2>
+
+        {error && (
+            <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-lg mb-6 text-sm text-center">
+            {error}
+            </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">

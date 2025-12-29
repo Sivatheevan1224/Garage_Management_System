@@ -1,23 +1,48 @@
-import { Navbar } from "./components/Navbar"
-import { HeroSection } from "./components/HeroSection"
-import { FeaturesSection } from "./components/FeaturesSection"
-import { AboutSection } from "./components/AboutSection"
-import { ContactSection } from "./components/ContactSection"
-import { Footer } from "./components/Footer"
+
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { GarageProvider, useGarage } from './context/GarageContext';
+
+import Home from './pages/Home';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import StaffDashboard from './pages/staff/StaffDashboard';
+
+// Check Auth Wrapper
+const ProtectedRoute = ({ children, role }) => {
+  const { currentUser } = useGarage();
+  if (!currentUser) return <Navigate to="/" />;
+  if (role && currentUser.role !== role) return <Navigate to="/" />;
+  return children;
+};
 
 function App() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <Navbar />
-      <main className="flex flex-col gap-8 pb-8">
-        <HeroSection />
-        <FeaturesSection />
-        <AboutSection />
-        <ContactSection />
-      </main>
-      <Footer />
-    </div>
-  )
+    <GarageProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          
+          {/* Admin Routes */}
+          <Route path="/admin/*" element={
+            <ProtectedRoute role="admin">
+              <AdminDashboard />
+            </ProtectedRoute>
+          } />
+
+          {/* Staff Routes */}
+          <Route path="/staff/*" element={
+            <ProtectedRoute role="staff">
+              <StaffDashboard />
+            </ProtectedRoute>
+          } />
+
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Router>
+    </GarageProvider>
+  );
 }
 
-export default App
+export default App;
