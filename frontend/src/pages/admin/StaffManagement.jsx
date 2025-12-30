@@ -4,18 +4,32 @@ import { useGarage } from '../../context/GarageContext';
 import { Plus, User, Trash2, Mail } from 'lucide-react';
 
 const StaffManagement = () => {
-    const { staffMembers, addStaffMember, removeStaffMember } = useGarage();
+    const { staffMembers, registerStaff, removeStaffMember } = useGarage();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [error, setError] = useState('');
     
     const [formData, setFormData] = useState({
         name: '', email: '', password: '', role: 'staff'
     });
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        addStaffMember(formData);
-        setIsModalOpen(false);
-        setFormData({ name: '', email: '', password: '', role: 'staff' });
+        setError('');
+        try {
+            const result = await registerStaff(formData);
+            if (result.success) {
+                setIsModalOpen(false);
+                setFormData({ name: '', email: '', password: '', role: 'staff' });
+                // We should probably refresh the staff list here
+                if (window.confirm('Account created! Awaiting admin approval. Reload to see pending?')) {
+                    window.location.reload();
+                }
+            } else {
+                setError(result.message || 'Failed to create account');
+            }
+        } catch (err) {
+            setError('An error occurred. Please try again.');
+        }
     };
 
 
@@ -45,7 +59,11 @@ const StaffManagement = () => {
                             </div>
                         </div>
 
-                         <button onClick={() => removeStaffMember(staff.id)} className="w-full py-2 border border-destructive/30 text-destructive rounded-lg hover:bg-destructive/5 transition-all flex items-center justify-center space-x-2">
+                         <button onClick={async () => {
+                             if(window.confirm('Are you sure you want to remove this staff member?')) {
+                                 await removeStaffMember(staff.id);
+                             }
+                         }} className="w-full py-2 border border-destructive/30 text-destructive rounded-lg hover:bg-destructive/5 transition-all flex items-center justify-center space-x-2">
                             <Trash2 size={16} />
                             <span>Remove Access</span>
                         </button>

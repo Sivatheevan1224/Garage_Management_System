@@ -20,14 +20,21 @@ const CustomerManagement = () => {
         c.nic.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const handleSubmit = (e) => {
+    const [error, setError] = useState('');
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (editingCustomer) {
-            updateCustomer(editingCustomer.id, formData);
-        } else {
-            addCustomer(formData);
+        setError('');
+        try {
+            if (editingCustomer) {
+                await updateCustomer(editingCustomer.id, formData);
+            } else {
+                await addCustomer(formData);
+            }
+            closeModal();
+        } catch (err) {
+            setError('Failed to save customer. Please try again.');
         }
-        closeModal();
     };
 
     const openModal = (customer = null) => {
@@ -99,7 +106,11 @@ const CustomerManagement = () => {
                                         <button onClick={() => openModal(customer)} className="p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg transition-colors">
                                             <Edit size={16} />
                                         </button>
-                                        <button onClick={() => deleteCustomer(customer.id)} className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors">
+                                        <button onClick={async () => {
+                                            if(window.confirm('Are you sure you want to delete this customer?')) {
+                                                await deleteCustomer(customer.id);
+                                            }
+                                        }} className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors">
                                             <Trash2 size={16} />
                                         </button>
                                     </div>
@@ -126,6 +137,7 @@ const CustomerManagement = () => {
                                 <X size={24} />
                             </button>
                         </div>
+                        {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded text-sm">{error}</div>}
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>

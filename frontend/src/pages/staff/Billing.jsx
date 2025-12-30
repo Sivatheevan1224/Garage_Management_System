@@ -28,22 +28,29 @@ const Billing = () => {
 
     // Auto-select if navigated from ServiceManagement
     useEffect(() => {
-        if (location.state?.serviceId) {
-            const service = services.find(s => s.id === location.state.serviceId);
-            if (service && service.status === 'Completed') {
-                // Check if invoice already exists for this service
-                const existingInvoice = invoices.find(inv => inv.serviceId === service.id);
-                if (existingInvoice) {
-                    setSelectedInvoice(existingInvoice);
-                } else {
-                    // Create invoice for completed service
-                    const newInvoice = createInvoice(service.id);
-                    if (newInvoice) {
-                        setSelectedInvoice(newInvoice);
+        const autoCreate = async () => {
+            if (location.state?.serviceId) {
+                const service = services.find(s => s.id === location.state.serviceId);
+                if (service && service.status === 'Completed') {
+                    // Check if invoice already exists for this service
+                    const existingInvoice = invoices.find(inv => inv.serviceId === service.id);
+                    if (existingInvoice) {
+                        setSelectedInvoice(existingInvoice);
+                    } else {
+                        // Create invoice for completed service
+                        try {
+                            const newInvoice = await createInvoice(service.id);
+                            if (newInvoice) {
+                                setSelectedInvoice(newInvoice);
+                            }
+                        } catch (err) {
+                            console.error('Auto-create invoice failed:', err);
+                        }
                     }
                 }
             }
-        }
+        };
+        autoCreate();
     }, [location.state, services, invoices, createInvoice]);
 
     // Filter invoices based on search and status
@@ -69,9 +76,9 @@ const Billing = () => {
     const overdueInvoices = getOverdueInvoices();
     
     // Calculate summary stats
-    const totalRevenue = payments.reduce((sum, payment) => sum + payment.amount, 0);
-    const totalOutstanding = outstandingInvoices.reduce((sum, inv) => sum + inv.balancedue, 0);
-    const totalOverdue = overdueInvoices.reduce((sum, inv) => sum + inv.balancedue, 0);
+    const totalRevenue = payments.reduce((sum, payment) => sum + (parseFloat(payment.amount) || 0), 0);
+    const totalOutstanding = outstandingInvoices.reduce((sum, inv) => sum + (parseFloat(inv.balancedue) || 0), 0);
+    const totalOverdue = overdueInvoices.reduce((sum, inv) => sum + (parseFloat(inv.balancedue) || 0), 0);
 
     const StatusBadge = ({ status }) => {
         const statusConfig = {
@@ -123,7 +130,7 @@ const Billing = () => {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-green-600 font-medium">Total Revenue</p>
-                                <p className="text-2xl font-bold text-green-800">${totalRevenue.toFixed(2)}</p>
+                                <p className="text-2xl font-bold text-green-800">LKR {totalRevenue.toFixed(2)}</p>
                             </div>
                             <DollarSign className="text-green-500" size={24} />
                         </div>
@@ -132,7 +139,7 @@ const Billing = () => {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-blue-600 font-medium">Outstanding</p>
-                                <p className="text-2xl font-bold text-blue-800">${totalOutstanding.toFixed(2)}</p>
+                                <p className="text-2xl font-bold text-blue-800">LKR {totalOutstanding.toFixed(2)}</p>
                             </div>
                             <Clock className="text-blue-500" size={24} />
                         </div>
@@ -141,7 +148,7 @@ const Billing = () => {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm text-red-600 font-medium">Overdue</p>
-                                <p className="text-2xl font-bold text-red-800">${totalOverdue.toFixed(2)}</p>
+                                <p className="text-2xl font-bold text-red-800">LKR {totalOverdue.toFixed(2)}</p>
                             </div>
                             <AlertCircle className="text-red-500" size={24} />
                         </div>
@@ -314,7 +321,7 @@ const InvoicesTab = ({
                                         Due: {dueDate.toLocaleDateString()}
                                     </span>
                                     <span className="font-mono text-sm font-bold text-gray-900">
-                                        ${invoice.balancedue.toFixed(2)}
+                                        LKR {invoice.balancedue.toFixed(2)}
                                     </span>
                                 </div>
                             </div>
@@ -358,13 +365,22 @@ const InvoiceDetailView = ({ invoice, vehicles, customers, payments, setShowPaym
     const customer = customers.find(c => c.id === invoice.customerId);
     const [isEditing, setIsEditing] = useState(false);
     
-    const handleStatusUpdate = (newStatus) => {
-        updateInvoice(invoice.id, { status: newStatus });
+    const handleStatusUpdate = async (newStatus) => {
+        try {
+            await updateInvoice(invoice.id, { status: newStatus });
+        } catch (err) {
+            alert('Failed to update invoice status.');
+        }
     };
 
-    const handleDelete = () => {
+    const handleDelete = async () => {
         if (window.confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
-            deleteInvoice(invoice.id);
+            try {
+                await deleteInvoice(invoice.id);
+                // setSelectedInvoice(null); // This is handled by parent usually but good to keep in mind
+            } catch (err) {
+                alert('Failed to delete invoice.');
+            }
         }
     };
 
@@ -474,8 +490,8 @@ const InvoiceDetailView = ({ invoice, vehicles, customers, payments, setShowPaym
                                             {item.detail && <p className="text-xs sm:text-sm text-gray-600">{item.detail}</p>}
                                         </td>
                                         <td className="py-4 text-center font-mono text-sm">{item.quantity}</td>
-                                        <td className="py-4 text-right font-mono text-sm">${item.unitPrice.toFixed(2)}</td>
-                                        <td className="py-4 text-right font-mono font-bold text-sm">${item.total.toFixed(2)}</td>
+                                        <td className="py-4 text-right font-mono text-sm">LKR {item.unitPrice.toFixed(2)}</td>
+                                        <td className="py-4 text-right font-mono font-bold text-sm">LKR {item.total.toFixed(2)}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -487,30 +503,30 @@ const InvoiceDetailView = ({ invoice, vehicles, customers, payments, setShowPaym
                         <div className="w-full sm:w-80">
                             <div className="flex justify-between py-2 border-b border-gray-200">
                                 <span className="text-gray-600">Subtotal:</span>
-                                <span className="font-mono">${invoice.subtotal.toFixed(2)}</span>
+                                <span className="font-mono">LKR {invoice.subtotal.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between py-2 border-b border-gray-200">
                                 <span className="text-gray-600">Tax ({(invoice.taxRate * 100).toFixed(1)}%):</span>
-                                <span className="font-mono">${invoice.taxAmount.toFixed(2)}</span>
+                                <span className="font-mono">LKR {invoice.taxAmount.toFixed(2)}</span>
                             </div>
                             {invoice.discount > 0 && (
                                 <div className="flex justify-between py-2 border-b border-gray-200">
                                     <span className="text-gray-600">Discount:</span>
-                                    <span className="font-mono text-red-600">-${invoice.discount.toFixed(2)}</span>
+                                    <span className="font-mono text-red-600">-LKR {invoice.discount.toFixed(2)}</span>
                                 </div>
                             )}
                             <div className="flex justify-between py-3 border-b-2 border-gray-300 text-lg font-bold">
                                 <span>Total:</span>
-                                <span className="font-mono">${invoice.total.toFixed(2)}</span>
+                                <span className="font-mono">LKR {invoice.total.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between py-2">
                                 <span className="text-gray-600">Paid:</span>
-                                <span className="font-mono text-green-600">${invoice.paidAmount.toFixed(2)}</span>
+                                <span className="font-mono text-green-600">LKR {invoice.paidAmount.toFixed(2)}</span>
                             </div>
                             <div className="flex justify-between py-2 text-lg font-bold">
                                 <span>Balance Due:</span>
                                 <span className={`font-mono ${invoice.balancedue > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                    ${invoice.balancedue.toFixed(2)}
+                                    LKR {invoice.balancedue.toFixed(2)}
                                 </span>
                             </div>
                         </div>
@@ -535,7 +551,7 @@ const InvoiceDetailView = ({ invoice, vehicles, customers, payments, setShowPaym
                                             </p>
                                         </div>
                                         <span className="font-mono font-bold text-green-800">
-                                            ${payment.amount.toFixed(2)}
+                                            LKR {payment.amount.toFixed(2)}
                                         </span>
                                     </div>
                                 ))}
@@ -583,8 +599,8 @@ const PaymentsTab = ({ payments, invoices, customers }) => {
         })
         .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    const totalPayments = filteredPayments.reduce((sum, payment) => sum + payment.amount, 0);
-    
+    const totalPayments = filteredPayments.reduce((sum, payment) => sum + (parseFloat(payment.amount) || 0), 0);
+
     return (
         <div className="w-full bg-white">
             <div className="p-4 border-b border-border">
@@ -592,7 +608,7 @@ const PaymentsTab = ({ payments, invoices, customers }) => {
                     <h3 className="font-bold text-foreground">Payment History</h3>
                     <div className="text-right">
                         <p className="text-sm text-muted-foreground">Total Collected</p>
-                        <p className="text-xl font-bold text-green-600">${totalPayments.toFixed(2)}</p>
+                        <p className="text-xl font-bold text-green-600">LKR {totalPayments.toFixed(2)}</p>
                     </div>
                 </div>
                 
@@ -652,7 +668,7 @@ const PaymentsTab = ({ payments, invoices, customers }) => {
                                     </td>
                                     <td className="p-4 font-mono text-sm">{payment.reference}</td>
                                     <td className="p-4 text-right font-mono font-bold text-green-600">
-                                        ${payment.amount.toFixed(2)}
+                                        LKR {payment.amount.toFixed(2)}
                                     </td>
                                 </tr>
                             );
@@ -711,7 +727,7 @@ const CustomersTab = ({ customers, getCustomerBalance }) => {
                                         <span className={`font-mono font-bold ${
                                             balance > 0 ? 'text-red-600' : 'text-green-600'
                                         }`}>
-                                            ${balance.toFixed(2)}
+                                            LKR {balance.toFixed(2)}
                                         </span>
                                     </td>
                                     <td className="p-4 text-center">
@@ -882,19 +898,23 @@ const CreateInvoiceModal = ({ isOpen, onClose, completedServices, createInvoice,
 
     const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
 
-    const handleCreateInvoice = () => {
+    const handleCreateInvoice = async () => {
         if (!selectedServiceId || lineItems.length === 0) return;
 
-        const invoice = createInvoice(selectedServiceId, {
-            lineItems,
-            subtotal,
-            discount,
-            notes
-        });
+        try {
+            const invoice = await createInvoice(selectedServiceId, {
+                lineItems,
+                subtotal,
+                discount,
+                notes
+            });
 
-        if (invoice) {
-            setSelectedInvoice(invoice);
-            onClose();
+            if (invoice) {
+                setSelectedInvoice(invoice);
+                onClose();
+            }
+        } catch (err) {
+            alert('Failed to create invoice.');
         }
     };
 
@@ -924,7 +944,7 @@ const CreateInvoiceModal = ({ isOpen, onClose, completedServices, createInvoice,
                             <option value="">Choose a service...</option>
                             {completedServices.map(service => (
                                 <option key={service.id} value={service.id}>
-                                    {service.type} - ${service.cost} ({new Date(service.date).toLocaleDateString()})
+                                    {service.type} - LKR {service.cost} ({new Date(service.date).toLocaleDateString()})
                                 </option>
                             ))}
                         </select>
@@ -1011,7 +1031,7 @@ const CreateInvoiceModal = ({ isOpen, onClose, completedServices, createInvoice,
                                     <div className="w-64">
                                         <div className="flex justify-between mb-2">
                                             <span>Subtotal:</span>
-                                            <span className="font-mono">${subtotal.toFixed(2)}</span>
+                                            <span className="font-mono">LKR {subtotal.toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between items-center mb-2">
                                             <span>Discount:</span>
@@ -1026,7 +1046,7 @@ const CreateInvoiceModal = ({ isOpen, onClose, completedServices, createInvoice,
                                         </div>
                                         <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-300">
                                             <span>Estimated Total:</span>
-                                            <span className="font-mono">${(subtotal - discount).toFixed(2)}</span>
+                                            <span className="font-mono">LKR {(subtotal - discount).toFixed(2)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1077,18 +1097,22 @@ const PaymentModal = ({ isOpen, onClose, invoice, recordPayment }) => {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [notes, setNotes] = useState('');
 
-    const handleRecordPayment = () => {
+    const handleRecordPayment = async () => {
         if (amount <= 0 || amount > invoice.balancedue) return;
 
-        recordPayment(invoice.id, {
-            amount: parseFloat(amount),
-            method,
-            reference,
-            date: new Date(date).toISOString(),
-            notes
-        });
+        try {
+            await recordPayment(invoice.id, {
+                amount: parseFloat(amount),
+                method,
+                reference,
+                date: new Date(date).toISOString(),
+                notes
+            });
 
-        onClose();
+            onClose();
+        } catch (err) {
+            alert('Failed to record payment.');
+        }
     };
 
     if (!isOpen) return null;
@@ -1107,7 +1131,7 @@ const PaymentModal = ({ isOpen, onClose, invoice, recordPayment }) => {
                     <div className="mb-4 p-4 bg-blue-50 rounded-lg">
                         <div className="flex justify-between items-center">
                             <span className="font-medium">Invoice: {invoice.invoiceNumber}</span>
-                            <span className="font-bold">${invoice.balancedue.toFixed(2)} due</span>
+                            <span className="font-bold">LKR {invoice.balancedue.toFixed(2)} due</span>
                         </div>
                     </div>
 
@@ -1280,7 +1304,7 @@ const ReportsModal = ({ isOpen, onClose, getRevenueReport }) => {
                             <div className="grid grid-cols-4 gap-4">
                                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                                     <h3 className="font-medium text-green-800 mb-2">Total Revenue</h3>
-                                    <p className="text-2xl font-bold text-green-900">${reportData.totalRevenue.toFixed(2)}</p>
+                                    <p className="text-2xl font-bold text-green-900">LKR {reportData.totalRevenue.toFixed(2)}</p>
                                 </div>
                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                     <h3 className="font-medium text-blue-800 mb-2">Payment Count</h3>
@@ -1288,7 +1312,7 @@ const ReportsModal = ({ isOpen, onClose, getRevenueReport }) => {
                                 </div>
                                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                                     <h3 className="font-medium text-purple-800 mb-2">Average Payment</h3>
-                                    <p className="text-2xl font-bold text-purple-900">${reportData.averagePayment.toFixed(2)}</p>
+                                    <p className="text-2xl font-bold text-purple-900">LKR {reportData.averagePayment.toFixed(2)}</p>
                                 </div>
                                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                                     <h3 className="font-medium text-orange-800 mb-2">Period</h3>
@@ -1303,7 +1327,7 @@ const ReportsModal = ({ isOpen, onClose, getRevenueReport }) => {
                                         {Object.entries(reportData.paymentMethods).map(([method, amount]) => (
                                             <div key={method} className="flex justify-between items-center">
                                                 <span className="capitalize text-gray-700">{method.replace('_', ' ')}</span>
-                                                <span className="font-mono font-bold">${amount.toFixed(2)}</span>
+                                                <span className="font-mono font-bold">LKR {amount.toFixed(2)}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -1315,7 +1339,7 @@ const ReportsModal = ({ isOpen, onClose, getRevenueReport }) => {
                                         {Object.entries(reportData.serviceRevenue).map(([service, amount]) => (
                                             <div key={service} className="flex justify-between items-center">
                                                 <span className="text-gray-700">{service}</span>
-                                                <span className="font-mono font-bold">${amount.toFixed(2)}</span>
+                                                <span className="font-mono font-bold">LKR {amount.toFixed(2)}</span>
                                             </div>
                                         ))}
                                     </div>

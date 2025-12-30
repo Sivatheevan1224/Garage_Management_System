@@ -9,20 +9,30 @@ export function LoginModal({ open, onOpenChange, onSwitchToRegister }) {
   const { login } = useGarage()
   const navigate = useNavigate()
   const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   })
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    const result = login(formData.email, formData.password)
-    if (result.success) {
-        onOpenChange(false)
-        if (result.user.role === 'admin') navigate('/admin')
-        else navigate('/staff')
-    } else {
-        setError(result.message)
+    setLoading(true)
+    setError("")
+    
+    try {
+        const result = await login(formData.email, formData.password)
+        if (result.success) {
+            onOpenChange(false)
+            if (result.user.role === 'admin') navigate('/admin')
+            else navigate('/staff')
+        } else {
+            setError(result.message || "Invalid credentials")
+        }
+    } catch (err) {
+        setError("An error occurred during login. Please try again.")
+    } finally {
+        setLoading(false)
     }
   }
 
@@ -91,9 +101,10 @@ export function LoginModal({ open, onOpenChange, onSwitchToRegister }) {
 
           <button
             type="submit"
-            className="w-full h-12 bg-gradient-to-r from-accent to-accent/80 hover:from-accent/90 hover:to-accent/70 text-white rounded-lg font-medium transition-all"
+            disabled={loading}
+            className={`w-full h-12 bg-gradient-to-r from-accent to-accent/80 hover:from-accent/90 hover:to-accent/70 text-white rounded-lg font-medium transition-all ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
-            Login
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 

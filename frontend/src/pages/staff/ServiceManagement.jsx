@@ -27,11 +27,18 @@ const ServiceManagement = () => {
     const getVehicleNumber = (id) => vehicles.find(v => v.id === id)?.number || 'Unknown';
     const getTechName = (id) => technicians.find(t => t.id === id)?.name || 'Unassigned';
 
-    const handleSubmit = (e) => {
+    const [error, setError] = useState('');
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        addService(formData);
-        setIsModalOpen(false);
-        setFormData({ vehicleId: '', type: 'General Service', description: '', technicianId: '', cost: '', date: new Date().toISOString().split('T')[0] });
+        setError('');
+        try {
+            await addService(formData);
+            setIsModalOpen(false);
+            setFormData({ vehicleId: '', type: 'General Service', description: '', technicianId: '', cost: '', date: new Date().toISOString().split('T')[0] });
+        } catch (err) {
+            setError('Failed to create service record. Please try again.');
+        }
     };
 
     const handleGenerateInvoice = (service) => {
@@ -89,7 +96,13 @@ const ServiceManagement = () => {
                                 </td>
                                 <td className="p-4">
                                     {service.status === 'Pending' ? (
-                                        <button onClick={() => updateServiceStatus(service.id, 'Completed')} className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1 rounded-md text-sm transition-all flex items-center space-x-1 border border-blue-200">
+                                        <button onClick={async () => {
+                                            try {
+                                                await updateServiceStatus(service.id, 'Completed');
+                                            } catch (err) {
+                                                alert('Failed to update status.');
+                                            }
+                                        }} className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1 rounded-md text-sm transition-all flex items-center space-x-1 border border-blue-200">
                                             <CheckCircle size={14} />
                                             <span>Mark Done</span>
                                         </button>
@@ -119,6 +132,7 @@ const ServiceManagement = () => {
                                 <X size={24} />
                             </button>
                         </div>
+                        {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded text-sm">{error}</div>}
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-sm text-muted-foreground mb-1">Select Vehicle</label>
@@ -161,7 +175,7 @@ const ServiceManagement = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm text-muted-foreground mb-1">Estimated Cost ($)</label>
+                                    <label className="block text-sm text-muted-foreground mb-1">Estimated Cost (LKR)</label>
                                     <input type="number" className="w-full bg-background border border-border rounded-lg p-2 text-foreground outline-none focus:ring-2 focus:ring-emerald-500/50"
                                         value={formData.cost} onChange={e => setFormData({...formData, cost: e.target.value})} placeholder="0.00" />
                                 </div>
