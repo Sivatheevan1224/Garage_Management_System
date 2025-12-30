@@ -1,7 +1,13 @@
 import { useState } from "react"
 import { X, Lock, Mail, User } from "lucide-react"
+import { useGarage } from "../context/GarageContext"
 
 export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
+  const { registerStaff } = useGarage()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState(false)
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -9,9 +15,38 @@ export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
     confirmPassword: "",
   })
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    console.log("Register:", formData)
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match")
+      return
+    }
+
+    setLoading(true)
+    setError("")
+    
+    try {
+      const result = await registerStaff({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: 'staff' // Default role for registration
+      })
+
+      if (result.success) {
+        setSuccess(true)
+        setTimeout(() => {
+          onOpenChange(false)
+          onSwitchToLogin()
+        }, 3000)
+      } else {
+        setError(result.message || "Registration failed")
+      }
+    } catch (err) {
+      setError("An unexpected error occurred")
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleChange = (e) => {
@@ -35,7 +70,15 @@ export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
 
         <h2 className="text-2xl font-bold text-foreground mb-8">Register for ProGarage</h2>
 
+        {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">{error}</div>}
+        {success && (
+          <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
+            Account created successfully! Admin approval is required before you can login. Redirecting...
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* ... inputs stay the same ... */}
           <div className="space-y-2">
             <label htmlFor="register-name" className="text-sm font-medium text-foreground flex items-center gap-2">
               <User className="h-4 w-4" />
@@ -109,9 +152,10 @@ export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
 
           <button
             type="submit"
-            className="w-full h-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white rounded-lg font-medium transition-all"
+            disabled={loading || success}
+            className="w-full h-12 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white rounded-lg font-medium transition-all disabled:opacity-50"
           >
-            Register
+            {loading ? "Registering..." : "Register"}
           </button>
         </form>
 

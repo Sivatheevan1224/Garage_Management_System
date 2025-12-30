@@ -23,14 +23,21 @@ const VehicleManagement = () => {
 
     const getCustomerName = (id) => customers.find(c => c.id === id)?.name || 'Unknown';
 
-    const handleSubmit = (e) => {
+    const [error, setError] = useState('');
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (editingVehicle) {
-            updateVehicle(editingVehicle.id, formData);
-        } else {
-            addVehicle(formData);
+        setError('');
+        try {
+            if (editingVehicle) {
+                await updateVehicle(editingVehicle.id, formData);
+            } else {
+                await addVehicle(formData);
+            }
+            closeModal();
+        } catch (err) {
+            setError('Failed to save vehicle. Please try again.');
         }
-        closeModal();
     };
 
     const openModal = (vehicle = null) => {
@@ -122,10 +129,11 @@ const VehicleManagement = () => {
                     <div className="bg-white rounded-2xl w-full max-w-md border border-border shadow-2xl p-6">
                          <div className="flex justify-between items-center mb-6">
                             <h3 className="text-xl font-bold text-foreground">{editingVehicle ? 'Edit Vehicle' : 'Register Vehicle'}</h3>
-                            <button onClick={() => setIsModalOpen(false)} className="text-muted-foreground hover:text-foreground">
+                            <button onClick={() => closeModal()} className="text-muted-foreground hover:text-foreground">
                                 <X size={24} />
                             </button>
                         </div>
+                        {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded text-sm">{error}</div>}
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-sm text-muted-foreground mb-1">Customer (Owner)</label>

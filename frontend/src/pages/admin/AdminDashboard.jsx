@@ -78,7 +78,8 @@ const AdminHome = () => {
                 <StatsCard title="Total Customers" value={customers.length} icon={<Users className="text-blue-600" />} color="bg-blue-50" />
                 <StatsCard title="Total Vehicles" value={vehicles.length} icon={<Wrench className="text-emerald-600" />} color="bg-emerald-50" />
                 <StatsCard title="Today's Services" value={todayServices} icon={<FileText className="text-amber-600" />} color="bg-amber-50" />
-                <StatsCard title="Total Revenue" value={`$${totalRevenue.toLocaleString()}`} icon={<LayoutDashboard className="text-purple-600" />} color="bg-purple-50" />
+                <StatsCard title="Total Revenue" value={`LKR ${totalRevenue.toLocaleString()}`} icon={<LayoutDashboard className="text-purple-600" />} color="bg-purple-50" />
+ burial:
             </div>
 
             <div className="bg-white rounded-xl p-6 border border-border shadow-sm">
