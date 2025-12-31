@@ -29,9 +29,7 @@ export function Footer() {
           {/* Brand Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-primary to-primary/80 rounded-lg p-2.5 shadow-sm">
-                <Wrench className="h-5 w-5 text-white" />
-              </div>
+              <img src="/logo.png" alt="ProGarage Logo" className="h-10 w-auto object-contain" />
               <span className="text-xl font-extrabold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">ProGarage</span>
             </div>
             <p className="text-sm text-gray-600 leading-relaxed">

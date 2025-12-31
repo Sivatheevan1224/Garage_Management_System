@@ -4,13 +4,16 @@ import { useGarage } from '../../context/GarageContext';
 import { Plus, User, Trash2, Mail } from 'lucide-react';
 
 const StaffManagement = () => {
-    const { staffMembers, registerStaff, removeStaffMember } = useGarage();
+    const { staffMembers, registerStaff, removeStaffMember, approveStaffMember, updateUserRole, currentUser } = useGarage();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [error, setError] = useState('');
     
     const [formData, setFormData] = useState({
         name: '', email: '', password: '', role: 'staff'
     });
+
+    const pendingStaff = staffMembers?.filter(s => !s.is_approved) || [];
+    const activeStaff = staffMembers?.filter(s => s.is_approved) || [];
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -20,10 +23,8 @@ const StaffManagement = () => {
             if (result.success) {
                 setIsModalOpen(false);
                 setFormData({ name: '', email: '', password: '', role: 'staff' });
-                // We should probably refresh the staff list here
-                if (window.confirm('Account created! Awaiting admin approval. Reload to see pending?')) {
-                    window.location.reload();
-                }
+                // Refresh logic is handled in context or we can force reload if needed, but context update is better
+                if(result.message) alert(result.message);
             } else {
                 setError(result.message || 'Failed to create account');
             }
@@ -32,9 +33,21 @@ const StaffManagement = () => {
         }
     };
 
+    const handleApprove = async (id) => {
+        if(window.confirm('Approve this staff member?')) {
+            await approveStaffMember(id);
+        }
+    }
+
+    const handleRoleChange = async (id, newRole) => {
+        if(window.confirm(`Change user role to ${newRole}?`)) {
+            await updateUserRole(id, newRole);
+        }
+    }
+
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold text-foreground">Staff Management</h2>
                 <button onClick={() => setIsModalOpen(true)} className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all shadow-sm">
@@ -43,32 +56,107 @@ const StaffManagement = () => {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {staffMembers?.map(staff => (
-                    <div key={staff.id} className="bg-white rounded-xl border border-border p-6 flex flex-col items-center text-center shadow-sm hover:shadow-md transition-all">
-                        <div className="w-20 h-20 rounded-full bg-muted mb-4 flex items-center justify-center">
-                            <User size={40} className="text-muted-foreground" />
-                        </div>
-                        <h3 className="text-xl font-bold text-foreground">{staff.name}</h3>
-                        <p className="text-primary text-sm mb-4 px-2 py-1 bg-primary/10 rounded-full">{staff.role.toUpperCase()}</p>
-                        
-                        <div className="w-full text-left space-y-3 mb-6">
-                            <div className="flex items-center space-x-3 text-muted-foreground">
-                                <Mail size={16} />
-                                <span className="text-sm">{staff.email}</span>
+            {/* Pending Approvals Section */}
+            {pendingStaff.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
+                    <h3 className="text-lg font-bold text-amber-900 mb-4 flex items-center gap-2">
+                        <User className="h-5 w-5" />
+                        Pending Approvals
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {pendingStaff.map(staff => (
+                            <div key={staff.id} className="bg-white rounded-xl border border-amber-100 p-6 flex flex-col items-center text-center shadow-sm">
+                                <div className="w-16 h-16 rounded-full bg-amber-100 mb-3 flex items-center justify-center">
+                                    <User size={30} className="text-amber-600" />
+                                </div>
+                                <h4 className="text-lg font-bold text-foreground">{staff.name}</h4>
+                                <p className="text-muted-foreground text-sm mb-4">{staff.email}</p>
+                                <div className="flex gap-2 w-full">
+                                    <button 
+                                        onClick={() => handleApprove(staff.id)}
+                                        className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-2 rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                        Approve
+                                    </button>
+                                    <button 
+                                        onClick={() => removeStaffMember(staff.id)}
+                                        className="flex-1 bg-white border border-destructive/30 text-destructive hover:bg-destructive/5 py-2 rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                        Reject
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-
-                         <button onClick={async () => {
-                             if(window.confirm('Are you sure you want to remove this staff member?')) {
-                                 await removeStaffMember(staff.id);
-                             }
-                         }} className="w-full py-2 border border-destructive/30 text-destructive rounded-lg hover:bg-destructive/5 transition-all flex items-center justify-center space-x-2">
-                            <Trash2 size={16} />
-                            <span>Remove Access</span>
-                        </button>
+                        ))}
                     </div>
-                ))}
+                </div>
+            )}
+
+            {/* Active Staff Section */}
+            <div>
+                <h3 className="text-lg font-bold text-foreground mb-4">Active Staff Members</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {activeStaff.map(staff => (
+                        <div key={staff.id} className="bg-white rounded-xl border border-border p-6 flex flex-col items-center text-center shadow-sm hover:shadow-md transition-all">
+                            <div className="w-20 h-20 rounded-full bg-muted mb-4 flex items-center justify-center">
+                                <User size={40} className="text-muted-foreground" />
+                            </div>
+                            <h3 className="text-xl font-bold text-foreground">{staff.name}</h3>
+                            
+                            {/* Role Toggle Switch */}
+                            <div className="mb-6 flex justify-center">
+                                {currentUser?.id !== staff.id ? (
+                                    <div 
+                                        onClick={() => handleRoleChange(staff.id, staff.role === 'admin' ? 'staff' : 'admin')}
+                                        className={`relative w-36 h-10 rounded-full cursor-pointer transition-all duration-500 ease-in-out flex items-center p-1 shadow-inner select-none ${staff.role === 'admin' ? 'bg-gradient-to-r from-primary to-accent' : 'bg-gray-200'}`}
+                                    >
+                                        {/* Labels Background */}
+                                        <div className="absolute inset-0 flex items-center justify-between px-3 w-full h-full text-[10px] font-extrabold uppercase tracking-widest z-0 pointer-events-none">
+                                            <span className={`text-white transition-opacity duration-300 ${staff.role === 'admin' ? 'opacity-100' : 'opacity-0'}`}>
+                                                Admin
+                                            </span>
+                                            <span className={`text-gray-500 transition-opacity duration-300 ${staff.role === 'admin' ? 'opacity-0' : 'opacity-100'}`}>
+                                                Staff
+                                            </span>
+                                        </div>
+
+                                        {/* Toggle Knob */}
+                                        <div 
+                                            className={`relative z-10 w-8 h-8 bg-white rounded-full shadow-lg transform transition-all duration-500 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] flex items-center justify-center ${staff.role === 'admin' ? 'translate-x-[6.5rem]' : 'translate-x-0'}`}
+                                        >
+                                            <User size={16} className={`${staff.role === 'admin' ? 'text-primary' : 'text-gray-400'}`} />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="bg-primary/10 border border-primary/20 text-primary px-6 py-2 rounded-full font-bold text-xs uppercase tracking-wider shadow-sm">
+                                        {staff.role}
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="w-full text-left space-y-3 mb-6">
+                                <div className="flex items-center space-x-3 text-muted-foreground">
+                                    <Mail size={16} />
+                                    <span className="text-sm">{staff.email}</span>
+                                </div>
+                            </div>
+
+                            {currentUser?.id !== staff.id ? (
+                                <button onClick={async () => {
+                                    if(window.confirm('Are you sure you want to remove this staff member?')) {
+                                        await removeStaffMember(staff.id);
+                                    }
+                                }} className="w-full py-2 border border-destructive/30 text-destructive rounded-lg hover:bg-destructive/5 transition-all flex items-center justify-center space-x-2">
+                                    <Trash2 size={16} />
+                                    <span>Remove Access</span>
+                                </button>
+                            ) : (
+                                <div className="w-full py-2 border border-gray-200 text-gray-400 rounded-lg flex items-center justify-center space-x-2 bg-gray-50 cursor-not-allowed">
+                                    <span className="text-sm font-medium">Current User</span>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
             </div>
 
             {/* Modal */}

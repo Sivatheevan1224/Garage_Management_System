@@ -25,8 +25,11 @@ const StaffDashboard = () => {
         <div className="min-h-screen bg-background flex text-foreground font-sans">
             <aside className="w-64 bg-white border-r border-border flex flex-col shadow-sm">
                 <div className="p-6 border-b border-border">
-                    <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">ProGarage</h1>
-                    <p className="text-xs text-muted-foreground mt-1">Staff Portal</p>
+                    <div className="flex items-center gap-3 mb-1">
+                        <img src="/logo.png" alt="ProGarage" className="h-8 w-auto object-contain" />
+                        <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-500 to-teal-600 bg-clip-text text-transparent">ProGarage</h1>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Staff Portal</p>
                 </div>
 
                 <nav className="flex-1 p-4 space-y-2">

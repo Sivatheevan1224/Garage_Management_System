@@ -68,7 +68,10 @@ export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
           <X className="h-5 w-5" />
         </button>
 
-        <h2 className="text-2xl font-bold text-foreground mb-8">Register for ProGarage</h2>
+        <div className="flex flex-col items-center mb-8 gap-4">
+            <img src="/logo.png" alt="ProGarage" className="h-16 w-auto object-contain" />
+            <h2 className="text-2xl font-bold text-foreground">Register for ProGarage</h2>
+        </div>
 
         {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">{error}</div>}
         {success && (

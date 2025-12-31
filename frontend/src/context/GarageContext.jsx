@@ -149,6 +149,30 @@ export const GarageProvider = ({ children }) => {
     }
   };
 
+  const approveStaffMember = async (id) => {
+      try {
+          // Pass current user id or a default
+          const adminId = currentUser ? currentUser.id : 'admin';
+          await apiService.auth.approveUser(id, adminId);
+          // Update local state
+          setStaffMembers(prev => prev.map(s => s.id === id ? { ...s, is_approved: true } : s));
+          return { success: true };
+      } catch (err) {
+          return handleApiError(err);
+      }
+  };
+
+  const updateUserRole = async (id, newRole) => {
+      try {
+          await apiService.users.update(id, { role: newRole });
+           // Update local state
+           setStaffMembers(prev => prev.map(s => s.id === id ? { ...s, role: newRole } : s));
+           return { success: true };
+      } catch(err) {
+          return handleApiError(err);
+      }
+  };
+
   // Customer Operations
   const addCustomer = async (customerData) => {
     try {
@@ -342,6 +366,8 @@ export const GarageProvider = ({ children }) => {
     logout,
     registerStaff,
     removeStaffMember,
+    approveStaffMember,
+    updateUserRole,
     addCustomer,
     updateCustomer,
     deleteCustomer,
