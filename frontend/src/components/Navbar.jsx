@@ -21,9 +21,7 @@ export function Navbar() {
         <div className="container mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-primary to-primary/80 rounded-lg p-2.5 shadow-sm">
-                <Wrench className="h-5 w-5 text-white" />
-              </div>
+              <img src="/logo.png" alt="ProGarage Logo" className="h-16 w-auto object-contain" />
               <span className="text-xl font-extrabold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">ProGarage</span>
             </div>
 

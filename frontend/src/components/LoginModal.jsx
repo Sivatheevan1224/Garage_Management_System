@@ -56,7 +56,10 @@ export function LoginModal({ open, onOpenChange, onSwitchToRegister }) {
         </button>
 
 
-        <h2 className="text-2xl font-bold text-foreground mb-8">Login to ProGarage</h2>
+        <div className="flex flex-col items-center mb-8 gap-4">
+            <img src="/logo.png" alt="ProGarage" className="h-16 w-auto object-contain" />
+            <h2 className="text-2xl font-bold text-foreground">Login to ProGarage</h2>
+        </div>
 
         {error && (
             <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-lg mb-6 text-sm text-center">
