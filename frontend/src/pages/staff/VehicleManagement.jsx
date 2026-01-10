@@ -12,7 +12,7 @@ const VehicleManagement = () => {
     const [editingVehicle, setEditingVehicle] = useState(null);
 
     const [formData, setFormData] = useState({
-        customerId: '', number: '', brand: '', model: '', year: '', fuelType: 'Petrol'
+        customerId: '', number: '', brand: '', model: '', year: '', color: '', mileage: 0, fuelType: 'Petrol'
     });
 
     const filteredVehicles = vehicles.filter(v => 
@@ -43,10 +43,19 @@ const VehicleManagement = () => {
     const openModal = (vehicle = null) => {
         if (vehicle) {
             setEditingVehicle(vehicle);
-            setFormData(vehicle);
+            setFormData({
+                customerId: vehicle.customerId || '',
+                number: vehicle.number || '',
+                brand: vehicle.brand || '',
+                model: vehicle.model || '',
+                year: vehicle.year || '',
+                color: vehicle.color || '',
+                mileage: vehicle.mileage || 0,
+                fuelType: vehicle.fuelType || 'Petrol'
+            });
         } else {
             setEditingVehicle(null);
-            setFormData({ customerId: customers[0]?.id || '', number: '', brand: '', model: '', year: '', fuelType: 'Petrol' });
+            setFormData({ customerId: customers[0]?.id || '', number: '', brand: '', model: '', year: '', color: '', mileage: 0, fuelType: 'Petrol' });
         }
         setIsModalOpen(true);
     };

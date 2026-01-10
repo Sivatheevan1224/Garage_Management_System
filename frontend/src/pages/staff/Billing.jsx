@@ -366,6 +366,11 @@ const InvoiceDetailView = ({ invoice, vehicles, customers, payments, setShowPaym
     const [isEditing, setIsEditing] = useState(false);
     
     const handleStatusUpdate = async (newStatus) => {
+        if (!invoice?.id) {
+            console.error('Cannot update invoice: missing id', invoice);
+            alert('Cannot update invoice: missing ID');
+            return;
+        }
         try {
             await updateInvoice(invoice.id, { status: newStatus });
         } catch (err) {

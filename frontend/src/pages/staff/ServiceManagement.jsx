@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useGarage } from '../../context/GarageContext';
-import { Plus, Search, Wrench, CheckCircle, Clock } from 'lucide-react';
+import { Plus, Search, Wrench, CheckCircle, Clock, X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const ServiceManagement = () => {
@@ -33,7 +33,13 @@ const ServiceManagement = () => {
         e.preventDefault();
         setError('');
         try {
-            await addService(formData);
+            const serviceData = {
+                ...formData,
+                technicianId: formData.technicianId || null,
+                cost: parseFloat(formData.cost) || 0,
+                estimatedHours: 0
+            };
+            await addService(serviceData);
             setIsModalOpen(false);
             setFormData({ vehicleId: '', type: 'General Service', description: '', technicianId: '', cost: '', date: new Date().toISOString().split('T')[0] });
         } catch (err) {

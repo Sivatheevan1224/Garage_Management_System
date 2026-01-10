@@ -1,279 +1,283 @@
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django.utils import timezone
-import bcrypt
-import uuid
-
-from .models import Customer, Vehicle, Technician, Service, Invoice, Payment, User, BillingSetting
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from utils.http_responses import success_response, error_response
+from utils.permissions import IsAdmin
+from .models import Customer, Vehicle, Technician, Service, Invoice, Payment, BillingSetting
 from .serializers import (
     CustomerSerializer, VehicleSerializer, TechnicianSerializer,
     ServiceSerializer, InvoiceSerializer, PaymentSerializer,
-    UserSerializer, UserRegistrationSerializer, UserLoginSerializer,
     BillingSettingSerializer
 )
+from .services import customer_service, vehicle_service, service_service
 
+# --- Customer Views ---
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def customer_list(request):
+    if request.method == 'GET':
+        customers = customer_service.get_all_customers()
+        serializer = CustomerSerializer(customers, many=True)
+        return success_response(serializer.data)
+    
+    elif request.method == 'POST':
+        serializer = CustomerSerializer(data=request.data)
+        if serializer.is_valid():
+            customer = customer_service.create_customer(serializer.validated_data)
+            return success_response(CustomerSerializer(customer).data, "Customer created", status_code=201)
+        return error_response(serializer.errors)
 
-class CustomerViewSet(viewsets.ModelViewSet):
-    queryset = Customer.objects.all()
-    serializer_class = CustomerSerializer
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def customer_detail(request, pk):
+    customer = customer_service.get_customer_by_id(pk)
+    if not customer:
+        return error_response("Customer not found", status_code=404)
+    
+    if request.method == 'GET':
+        serializer = CustomerSerializer(customer)
+        return success_response(serializer.data)
+    
+    elif request.method == 'PUT':
+        serializer = CustomerSerializer(customer, data=request.data)
+        if serializer.is_valid():
+            updated_customer = customer_service.update_customer(pk, serializer.validated_data)
+            return success_response(CustomerSerializer(updated_customer).data, "Customer updated")
+        return error_response(serializer.errors)
+    
+    elif request.method == 'DELETE':
+        customer_service.delete_customer(pk)
+        return success_response(None, "Customer deleted")
 
-    def create(self, request, *args, **kwargs):
-        data = request.data.copy()
-        if 'id' not in data or not data['id']:
-            data['id'] = str(uuid.uuid4())
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-
-class VehicleViewSet(viewsets.ModelViewSet):
-    queryset = Vehicle.objects.all()
-    serializer_class = VehicleSerializer
-
-    def create(self, request, *args, **kwargs):
-        data = request.data.copy()
-        if 'id' not in data or not data['id']:
-            data['id'] = str(uuid.uuid4())
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    @action(detail=False, methods=['get'])
-    def by_customer(self, request):
+# --- Vehicle Views ---
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def vehicle_list(request):
+    if request.method == 'GET':
         customer_id = request.query_params.get('customer_id')
         if customer_id:
-            vehicles = self.queryset.filter(customer_id=customer_id)
-            serializer = self.get_serializer(vehicles, many=True)
-            return Response(serializer.data)
-        return Response({'error': 'customer_id parameter required'}, status=status.HTTP_400_BAD_REQUEST)
+            vehicles = vehicle_service.get_vehicles_by_customer(customer_id)
+        else:
+            vehicles = vehicle_service.get_all_vehicles()
+        serializer = VehicleSerializer(vehicles, many=True)
+        return success_response(serializer.data)
+    
+    elif request.method == 'POST':
+        serializer = VehicleSerializer(data=request.data)
+        if serializer.is_valid():
+            vehicle = vehicle_service.create_vehicle(serializer.validated_data)
+            return success_response(VehicleSerializer(vehicle).data, "Vehicle created", status_code=201)
+        return error_response(serializer.errors)
 
 
-class TechnicianViewSet(viewsets.ModelViewSet):
-    queryset = Technician.objects.all()
-    serializer_class = TechnicianSerializer
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def vehicle_detail(request, pk):
+    vehicle = vehicle_service.get_vehicle_by_id(pk)
+    if not vehicle:
+        return error_response("Vehicle not found", status_code=404)
+    
+    if request.method == 'GET':
+        serializer = VehicleSerializer(vehicle)
+        return success_response(serializer.data)
+    
+    elif request.method == 'PUT':
+        serializer = VehicleSerializer(vehicle, data=request.data, partial=True)
+        if serializer.is_valid():
+            updated_vehicle = vehicle_service.update_vehicle(pk, serializer.validated_data)
+            return success_response(VehicleSerializer(updated_vehicle).data, "Vehicle updated")
+        return error_response(serializer.errors)
+    
+    elif request.method == 'DELETE':
+        vehicle_service.delete_vehicle(pk)
+        return success_response(None, "Vehicle deleted")
 
-    def create(self, request, *args, **kwargs):
+
+# --- Service Views ---
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def service_record_list(request):
+    if request.method == 'GET':
+        services = service_service.get_all_services()
+        serializer = ServiceSerializer(services, many=True)
+        return success_response(serializer.data)
+    
+    elif request.method == 'POST':
+        serializer = ServiceSerializer(data=request.data)
+        if serializer.is_valid():
+            service_record = service_service.create_service_record(serializer.validated_data)
+            return success_response(ServiceSerializer(service_record).data, "Service record created", status_code=201)
+        return error_response(serializer.errors)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def service_record_detail(request, pk):
+    service_record = service_service.get_service_by_id(pk)
+    if not service_record:
+        return error_response("Service record not found", status_code=404)
+    
+    if request.method == 'GET':
+        serializer = ServiceSerializer(service_record)
+        return success_response(serializer.data)
+    
+    elif request.method == 'PUT':
+        serializer = ServiceSerializer(service_record, data=request.data, partial=True)
+        if serializer.is_valid():
+            updated_service = service_service.update_service_record(pk, serializer.validated_data)
+            return success_response(ServiceSerializer(updated_service).data, "Service record updated")
+        return error_response(serializer.errors)
+    
+    elif request.method == 'DELETE':
+        service_service.delete_service_record(pk)
+        return success_response(None, "Service record deleted")
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_service_record_status(request, pk):
+    new_status = request.data.get('status')
+    if not new_status:
+        return error_response("Status is required")
+    
+    service_record = service_service.update_service_status(pk, new_status)
+    if service_record:
+        return success_response(ServiceSerializer(service_record).data, "Status updated")
+    return error_response("Service record not found", status_code=404)
+
+# --- Billing Settings ---
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_billing_settings(request):
+    settings = BillingSetting.objects.first()
+    if settings:
+        serializer = BillingSettingSerializer(settings)
+        return success_response(serializer.data)
+    return error_response("No billing settings found", status_code=404)
+
+# --- Technician Views ---
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def technician_list(request):
+    if request.method == 'GET':
+        technicians = Technician.objects.all()
+        serializer = TechnicianSerializer(technicians, many=True)
+        return success_response(serializer.data)
+    elif request.method == 'POST':
+        serializer = TechnicianSerializer(data=request.data)
+        if serializer.is_valid():
+            technician = serializer.save()
+            return success_response(TechnicianSerializer(technician).data, "Technician created", status_code=201)
+        return error_response(serializer.errors)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def technician_detail(request, pk):
+    try:
+        technician = Technician.objects.get(id=pk)
+    except Technician.DoesNotExist:
+        return error_response("Technician not found", status_code=404)
+    
+    if request.method == 'GET':
+        serializer = TechnicianSerializer(technician)
+        return success_response(serializer.data)
+    
+    elif request.method == 'PUT':
+        serializer = TechnicianSerializer(technician, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return success_response(serializer.data, "Technician updated")
+        return error_response(serializer.errors)
+    
+    elif request.method == 'DELETE':
+        technician.delete()
+        return success_response(None, "Technician deleted")
+
+
+# --- Invoice Views ---
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def invoice_list(request):
+    if request.method == 'GET':
+        invoices = Invoice.objects.all()
+        serializer = InvoiceSerializer(invoices, many=True)
+        return success_response(serializer.data)
+    elif request.method == 'POST':
+        # Remove empty id from request data if present
         data = request.data.copy()
-        if 'id' not in data or not data['id']:
-            data['id'] = str(uuid.uuid4())
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        if 'id' in data and not data['id']:
+            del data['id']
+        serializer = InvoiceSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return success_response(serializer.data, "Invoice created", status_code=201)
+        return error_response(serializer.errors)
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def invoice_detail(request, pk):
+    try:
+        invoice = Invoice.objects.get(id=pk)
+    except Invoice.DoesNotExist:
+        return error_response("Invoice not found", status_code=404)
+    
+    if request.method == 'GET':
+        serializer = InvoiceSerializer(invoice)
+        return success_response(serializer.data)
+    
+    elif request.method == 'PUT':
+        serializer = InvoiceSerializer(invoice, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return success_response(serializer.data, "Invoice updated")
+        return error_response(serializer.errors)
+    
+    elif request.method == 'DELETE':
+        invoice.delete()
+        return success_response(None, "Invoice deleted")
 
 
-class ServiceViewSet(viewsets.ModelViewSet):
-    queryset = Service.objects.all()
-    serializer_class = ServiceSerializer
-
-    def create(self, request, *args, **kwargs):
-        data = request.data.copy()
-        if 'id' not in data or not data['id']:
-            data['id'] = str(uuid.uuid4())
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    @action(detail=True, methods=['patch'])
-    def update_status(self, request, pk=None):
-        service = self.get_object()
-        new_status = request.data.get('status')
-        if new_status:
-            service.status = new_status
-            service.save()
-            return Response({'status': 'success', 'new_status': new_status})
-        return Response({'error': 'status field required'}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class InvoiceViewSet(viewsets.ModelViewSet):
-    queryset = Invoice.objects.all()
-    serializer_class = InvoiceSerializer
-
-    def create(self, request, *args, **kwargs):
-        data = request.data.copy()
-        if 'id' not in data or not data['id']:
-            data['id'] = str(uuid.uuid4())
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-
-class PaymentViewSet(viewsets.ModelViewSet):
-    queryset = Payment.objects.all()
-    serializer_class = PaymentSerializer
-
-    def create(self, request, *args, **kwargs):
-        data = request.data.copy()
-        if 'id' not in data or not data['id']:
-            data['id'] = str(uuid.uuid4())
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        
-        # Update invoice paid amount
-        payment = serializer.instance
-        invoice = payment.invoice
-        invoice.paid_amount += payment.amount
-        invoice.balance_due = invoice.total - invoice.paid_amount
-        if invoice.balance_due <= 0:
-            invoice.status = 'paid'
-        invoice.save()
-        
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    @action(detail=False, methods=['get'])
-    def by_invoice(self, request):
+# --- Payment Views ---
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def payment_list(request):
+    if request.method == 'GET':
         invoice_id = request.query_params.get('invoice_id')
         if invoice_id:
-            payments = self.queryset.filter(invoice_id=invoice_id)
-            serializer = self.get_serializer(payments, many=True)
-            return Response(serializer.data)
-        return Response({'error': 'invoice_id parameter required'}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-    @action(detail=False, methods=['post'])
-    def register(self, request):
-        serializer = UserRegistrationSerializer(data=request.data)
+            payments = Payment.objects.filter(invoice_id=invoice_id)
+        else:
+            payments = Payment.objects.all()
+        serializer = PaymentSerializer(payments, many=True)
+        return success_response(serializer.data)
+    elif request.method == 'POST':
+        serializer = PaymentSerializer(data=request.data)
         if serializer.is_valid():
-            # Hash password with bcrypt
-            password = serializer.validated_data['password']
-            hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+            payment = serializer.save()
             
-            # Create user
-            user = User.objects.create(
-                id=str(uuid.uuid4()),
-                name=serializer.validated_data['name'],
-                email=serializer.validated_data['email'],
-                password=hashed.decode('utf-8'),
-                role=serializer.validated_data.get('role', 'staff'),
-                is_approved=False,  # Requires admin approval
-                is_active=True
-            )
+            # Simple logic to update invoice (could be in a service)
+            invoice = payment.invoice
+            invoice.paid_amount += payment.amount
+            invoice.balance_due = invoice.total - invoice.paid_amount
+            if invoice.balance_due <= 0:
+                invoice.status = 'paid'
+            invoice.save()
             
-            return Response({
-                'success': True,
-                'message': 'Registration successful. Awaiting admin approval.',
-                'user_id': user.id
-            }, status=status.HTTP_201_CREATED)
+            return success_response(serializer.data, "Payment processed", status_code=201)
+        return error_response(serializer.errors)
+
+@api_view(['GET', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def payment_detail(request, pk):
+    try:
+        payment = Payment.objects.get(id=pk)
+    except Payment.DoesNotExist:
+        return error_response("Payment not found", status_code=404)
+    
+    if request.method == 'GET':
+        serializer = PaymentSerializer(payment)
+        return success_response(serializer.data)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    elif request.method == 'DELETE':
+        payment.delete()
+        return success_response(None, "Payment deleted")
 
-    @action(detail=False, methods=['post'])
-    def login(self, request):
-        serializer = UserLoginSerializer(data=request.data)
-        if serializer.is_valid():
-            email = serializer.validated_data['email']
-            password = serializer.validated_data['password']
-            
-            try:
-                user = User.objects.get(email=email)
-                
-                # Verify password
-                if bcrypt.checkpw(password.encode('utf-8'), user.password.encode('utf-8')):
-                    # Check if approved
-                    if not user.is_approved:
-                        return Response({
-                            'success': False,
-                            'message': 'Your account is pending admin approval.'
-                        }, status=status.HTTP_403_FORBIDDEN)
-                    
-                    # Check if active
-                    if not user.is_active:
-                        return Response({
-                            'success': False,
-                            'message': 'Your account has been deactivated.'
-                        }, status=status.HTTP_403_FORBIDDEN)
-                    
-                    # Login successful
-                    return Response({
-                        'success': True,
-                        'user': {
-                            'id': user.id,
-                            'name': user.name,
-                            'email': user.email,
-                            'role': user.role
-                        }
-                    })
-                else:
-                    return Response({
-                        'success': False,
-                        'message': 'Invalid credentials'
-                    }, status=status.HTTP_401_UNAUTHORIZED)
-                    
-            except User.DoesNotExist:
-                return Response({
-                    'success': False,
-                    'message': 'Invalid credentials'
-                }, status=status.HTTP_401_UNAUTHORIZED)
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    @action(detail=False, methods=['get'])
-    def pending_approvals(self, request):
-        """Get all pending staff registrations (admin only)"""
-        pending_users = User.objects.filter(role='staff', is_approved=False)
-        serializer = self.get_serializer(pending_users, many=True)
-        return Response({'pending_users': serializer.data})
-
-    @action(detail=True, methods=['post'])
-    def approve(self, request, pk=None):
-        """Approve a staff member (admin only)"""
-        user = self.get_object()
-        admin_id = request.data.get('admin_id', 'admin-001')
-        
-        user.is_approved = True
-        user.approved_at = timezone.now()
-        user.approved_by = admin_id
-        user.save()
-        
-        return Response({
-            'success': True,
-            'message': 'Staff member approved successfully'
-        })
-
-    @action(detail=True, methods=['post'])
-    def deactivate(self, request, pk=None):
-        """Deactivate a user (admin only)"""
-        user = self.get_object()
-        user.is_active = False
-        user.save()
-        
-        return Response({
-            'success': True,
-            'message': 'User deactivated successfully'
-        })
-
-    @action(detail=True, methods=['post'])
-    def activate(self, request, pk=None):
-        """Activate a user (admin only)"""
-        user = self.get_object()
-        user.is_active = True
-        user.save()
-        
-        return Response({
-            'success': True,
-            'message': 'User activated successfully'
-        })
-
-
-class BillingSettingViewSet(viewsets.ModelViewSet):
-    queryset = BillingSetting.objects.all()
-    serializer_class = BillingSettingSerializer
-
-    @action(detail=False, methods=['get'])
-    def current(self, request):
-        """Get current billing settings (should only be one record)"""
-        settings = BillingSetting.objects.first()
-        if settings:
-            serializer = self.get_serializer(settings)
-            return Response(serializer.data)
-        return Response({'error': 'No billing settings found'}, status=status.HTTP_404_NOT_FOUND)

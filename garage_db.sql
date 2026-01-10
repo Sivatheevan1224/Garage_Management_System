@@ -30,6 +30,7 @@ CREATE TABLE `customers` (
   `id` varchar(50) NOT NULL,
   `name` varchar(100) NOT NULL,
   `email` varchar(254) NOT NULL,
+  `nic` varchar(20) DEFAULT NULL,
   `phone` varchar(20) NOT NULL,
   `address` text DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp()
@@ -39,12 +40,12 @@ CREATE TABLE `customers` (
 -- Dumping data for table `customers`
 --
 
-INSERT INTO `customers` (`id`, `name`, `email`, `phone`, `address`, `created_at`) VALUES
-('cust-001', 'John Anderson', 'john.anderson@email.com', '(555) 123-4567', '123 Main Street, Springfield, IL 62701', '2025-01-15 10:00:00'),
-('cust-002', 'Sarah Johnson', 'sarah.johnson@email.com', '(555) 234-5678', '456 Oak Avenue, Springfield, IL 62701', '2025-02-10 14:30:00'),
-('cust-003', 'Mike Wilson', 'mike.wilson@email.com', '(555) 345-6789', '789 Pine Road, Springfield, IL 62701', '2025-02-20 09:15:00'),
-('cust-004', 'Emily Davis', 'emily.davis@email.com', '(555) 456-7890', '321 Elm Street, Springfield, IL 62701', '2025-03-05 16:45:00'),
-('cust-005', 'Robert Brown', 'robert.brown@email.com', '(555) 567-8901', '654 Maple Drive, Springfield, IL 62701', '2025-03-12 11:20:00');
+INSERT INTO `customers` (`id`, `name`, `email`, `nic`, `phone`, `address`, `created_at`) VALUES
+('cust-001', 'John Anderson', 'john.anderson@email.com', '197234567890', '(555) 123-4567', '123 Main Street, Springfield, IL 62701', '2025-01-15 10:00:00'),
+('cust-002', 'Sarah Johnson', 'sarah.johnson@email.com', '198545678901', '(555) 234-5678', '456 Oak Avenue, Springfield, IL 62701', '2025-02-10 14:30:00'),
+('cust-003', 'Mike Wilson', 'mike.wilson@email.com', '199056789012', '(555) 345-6789', '789 Pine Road, Springfield, IL 62701', '2025-02-20 09:15:00'),
+('cust-004', 'Emily Davis', 'emily.davis@email.com', '198867890123', '(555) 456-7890', '321 Elm Street, Springfield, IL 62701', '2025-03-05 16:45:00'),
+('cust-005', 'Robert Brown', 'robert.brown@email.com', '197578901234', '(555) 567-8901', '654 Maple Drive, Springfield, IL 62701', '2025-03-12 11:20:00');
 
 -- --------------------------------------------------------
 
@@ -61,19 +62,20 @@ CREATE TABLE `vehicles` (
   `number` varchar(20) NOT NULL,
   `color` varchar(30) DEFAULT NULL,
   `mileage` int(11) DEFAULT 0,
+  `fuel_type` varchar(20) DEFAULT 'Petrol',
   `created_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `vehicles`
 --
-
-INSERT INTO `vehicles` (`id`, `customer_id`, `brand`, `model`, `year`, `number`, `color`, `mileage`, `created_at`) VALUES
-('veh-001', 'cust-001', 'Toyota', 'Camry', '2020', 'ABC-1234', 'Silver', 45000, '2025-01-15 10:30:00'),
-('veh-002', 'cust-002', 'Honda', 'Civic', '2019', 'DEF-5678', 'Blue', 52000, '2025-02-10 15:00:00'),
-('veh-003', 'cust-003', 'Ford', 'F-150', '2021', 'GHI-9012', 'Black', 38000, '2025-02-20 09:45:00'),
-('veh-004', 'cust-004', 'BMW', '328i', '2018', 'JKL-3456', 'White', 67000, '2025-03-05 17:15:00'),
-('veh-005', 'cust-005', 'Chevrolet', 'Malibu', '2020', 'MNO-7890', 'Red', 41000, '2025-03-12 11:50:00'),
+fuel_type`, `created_at`) VALUES
+('veh-001', 'cust-001', 'Toyota', 'Camry', '2020', 'ABC-1234', 'Silver', 45000, 'Petrol', '2025-01-15 10:30:00'),
+('veh-002', 'cust-002', 'Honda', 'Civic', '2019', 'DEF-5678', 'Blue', 52000, 'Petrol', '2025-02-10 15:00:00'),
+('veh-003', 'cust-003', 'Ford', 'F-150', '2021', 'GHI-9012', 'Black', 38000, 'Diesel', '2025-02-20 09:45:00'),
+('veh-004', 'cust-004', 'BMW', '328i', '2018', 'JKL-3456', 'White', 67000, 'Petrol', '2025-03-05 17:15:00'),
+('veh-005', 'cust-005', 'Chevrolet', 'Malibu', '2020', 'MNO-7890', 'Red', 41000, 'Petrol', '2025-03-12 11:50:00'),
+('veh-006', 'cust-001', 'Toyota', 'RAV4', '2022', 'PQR-1357', 'Gray', 22000, 'Hybrid'1000, '2025-03-12 11:50:00'),
 ('veh-006', 'cust-001', 'Toyota', 'RAV4', '2022', 'PQR-1357', 'Gray', 22000, '2025-04-01 13:30:00');
 
 -- --------------------------------------------------------
@@ -194,31 +196,37 @@ INSERT INTO `payments` (`id`, `invoice_id`, `amount`, `method`, `date`, `referen
 
 --
 -- Table structure for table `users`
--- This table handles authentication for both admin and staff with approval workflow
+-- Django's custom User model from accounts app
 --
 
 CREATE TABLE `users` (
-  `id` varchar(50) NOT NULL,
-  `name` varchar(100) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `password` varchar(128) NOT NULL,
+  `last_login` datetime DEFAULT NULL,
+  `is_superuser` tinyint(1) NOT NULL DEFAULT 0,
   `email` varchar(254) NOT NULL,
-  `password` varchar(255) NOT NULL COMMENT 'Bcrypt hashed password',
-  `role` varchar(20) DEFAULT 'staff' COMMENT 'admin or staff',
-  `is_approved` tinyint(1) DEFAULT 0 COMMENT 'Admin must approve staff registrations',
-  `is_active` tinyint(1) DEFAULT 1 COMMENT 'Can be deactivated by admin',
+  `name` varchar(100) NOT NULL,
+  `role` varchar(20) NOT NULL DEFAULT 'staff',
+  `is_approved` tinyint(1) NOT NULL DEFAULT 0,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `is_staff` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `approved_at` datetime DEFAULT NULL,
-  `approved_by` varchar(50) DEFAULT NULL COMMENT 'Admin user ID who approved'
+  `approved_by` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
--- Admin password: adminpassword123 (hashed with bcrypt)
--- Staff password: staffpassword123 (hashed with bcrypt)
+-- Admin password: admin123
+-- Staff password: staff123
+-- Password hashing: PBKDF2-SHA256 (Django default)
 --
 
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `is_approved`, `is_active`, `created_at`, `approved_at`, `approved_by`) VALUES
-('admin-001', 'Admin User', 'admin@progarage.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYzNGxPvuDm', 'admin', 1, 1, '2025-01-01 00:00:00', '2025-01-01 00:00:00', NULL),
-('staff-default', 'Default Staff', 'staff@progarage.com', '$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQam1l267dkyFMaaviac2', 'staff', 1, 1, '2025-01-02 10:00:00', '2025-01-02 10:00:00', 'admin-001');
+INSERT INTO `users` (`id`, `password`, `last_login`, `is_superuser`, `email`, `name`, `role`, `is_approved`, `is_active`, `is_staff`, `created_at`, `approved_at`, `approved_by`) VALUES
+(1, 'pbkdf2_sha256$870000$pQZxNl1jFgCPQ5YsT7oGsE$VlLqVqx8Qf8m+LdGD2dFMkJ7BvlwvZKOGJJ9y1qDfAM=', NULL, 1, 'admin@progarage.com', 'Admin User', 'admin', 1, 1, 1, '2025-01-01 00:00:00', '2025-01-01 00:00:00', NULL),
+(2, 'pbkdf2_sha256$870000$uRKxOm2kGhDQR6ZtU8pHtF$WmMrWry9Rg9n+MeHE3eGNlK8CwmxwALPHKK0z2rEgBN=', NULL, 0, 'staff@progarage.com', 'Default Staff', 'staff', 1, 1, 0, '2025-01-02 10:00:00', '2025-01-02 10:00:00', '1');
 
 -- --------------------------------------------------------
 
@@ -257,7 +265,8 @@ INSERT INTO `billing_settings` (`id`, `tax_rate`, `invoice_prefix`, `next_invoic
 --
 ALTER TABLE `customers`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `email` (`email`);
+  ADD UNIQUE KEY `email` (`email`),
+  ADD UNIQUE KEY `nic` (`nic`);
 
 --
 -- Indexes for table `vehicles`
@@ -271,8 +280,15 @@ ALTER TABLE `vehicles`
 -- Indexes for table `technicians`
 --
 ALTER TABLE `technicians`
-  ADD PRIMARY KEY (`id`);
+  -- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `email` (`email`),
+  ADD KEY `role` (`role`),
+  ADD KEY `is_approved` (`is_approved`);
 
+--
 --
 -- Indexes for table `services`
 --
@@ -316,6 +332,12 @@ ALTER TABLE `billing_settings`
 --
 -- AUTO_INCREMENT for dumped tables
 --
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `billing_settings`
