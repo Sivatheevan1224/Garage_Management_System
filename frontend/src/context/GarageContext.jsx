@@ -49,9 +49,17 @@ export const GarageProvider = ({ children }) => {
   const normalizeBillingSettings = (bs) => {
     if (!bs) return null;
     return {
-      ...bs,
       taxRate: parseFloat(bs.taxRate) || 0,
-      nextInvoiceNumber: parseInt(bs.nextInvoiceNumber) || 1
+      invoicePrefix: bs.invoicePrefix || 'INV',
+      nextInvoiceNumber: parseInt(bs.nextInvoiceNumber) || 1,
+      paymentTerms: bs.paymentTerms || 'Net 30',
+      companyInfo: {
+        name: bs.companyName || '',
+        email: bs.companyEmail || '',
+        address: bs.companyAddress || '',
+        city: bs.companyCity || '',
+        phone: bs.companyPhone || ''
+      }
     };
   };
 
@@ -59,34 +67,40 @@ export const GarageProvider = ({ children }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [
-        custRes, 
-        vehRes, 
-        servRes, 
-        invRes, 
-        payRes, 
-        techRes, 
-        staffRes, 
-        billingRes
-      ] = await Promise.all([
+      const fetchPromises = [
+
+
         apiService.customers.getAll(),
         apiService.vehicles.getAll(),
         apiService.services.getAll(),
         apiService.invoices.getAll(),
         apiService.payments.getAll(),
         apiService.technicians.getAll(),
-        apiService.users.getAll(),
+        currentUser?.role === 'admin' ? apiService.users.getAll() : Promise.resolve({ data: [] }),
         apiService.billingSettings.getCurrent()
-      ]);
+      ];
 
-      // DRF returns data as an array or inside 'results' if paginated
-      setCustomers(custRes.data.results || custRes.data);
-      setVehicles(vehRes.data.results || vehRes.data);
-      setServices((servRes.data.results || servRes.data).map(normalizeService));
-      setInvoices((invRes.data.results || invRes.data).map(normalizeInvoice));
-      setPayments((payRes.data.results || payRes.data).map(normalizePayment));
-      setTechnicians(techRes.data.results || techRes.data);
-      setStaffMembers(staffRes.data.results || staffRes.data);
+      const [
+        custRes,
+        vehRes,
+        servRes,
+        invRes,
+        payRes,
+        techRes,
+        staffRes,
+        billingRes
+      ] = await Promise.all(fetchPromises);
+
+
+
+      // Standardized response returns data inside 'data' field
+      setCustomers(custRes.data);
+      setVehicles(vehRes.data);
+      setServices((servRes.data || []).map(normalizeService));
+      setInvoices((invRes.data || []).map(normalizeInvoice));
+      setPayments((payRes.data || []).map(normalizePayment));
+      setTechnicians(techRes.data);
+      setStaffMembers(staffRes.data);
       setBillingSettings(normalizeBillingSettings(billingRes.data));
       
       setLoading(false);
@@ -114,13 +128,14 @@ export const GarageProvider = ({ children }) => {
   const login = async (email, password) => {
     try {
       const response = await apiService.auth.login(email, password);
-      if (response.data.success) {
-        setCurrentUser(response.data.user);
-        // Refresh data after successful login to ensure everything is up to date
+      // Interceptor has unwrapped the data field
+      if (response.status_overall === 'success' || response.data.user) {
+        const userData = response.data.user || response.data;
+        setCurrentUser(userData);
         fetchData();
-        return { success: true, user: response.data.user };
+        return { success: true, user: userData };
       }
-      return response.data;
+      return { success: false, message: response.message || 'Login failed' };
     } catch (err) {
       return handleApiError(err);
     }
@@ -133,7 +148,10 @@ export const GarageProvider = ({ children }) => {
   const registerStaff = async (data) => {
     try {
       const response = await apiService.auth.register(data);
-      return response.data;
+      return { 
+        success: response.status_overall === 'success',
+        message: response.message 
+      };
     } catch (err) {
       return handleApiError(err);
     }
@@ -257,8 +275,10 @@ export const GarageProvider = ({ children }) => {
   // Invoice Operations
   const createInvoice = async (serviceId, invoiceData = {}) => {
     try {
-      const response = await apiService.invoices.create({ service_id: serviceId, ...invoiceData });
+      const response = await apiService.invoices.create({ serviceId, ...invoiceData });
+      console.log('Invoice created - raw response:', response.data);
       const normalized = normalizeInvoice(response.data);
+      console.log('Invoice created - normalized:', normalized);
       setInvoices(prev => [...prev, normalized]);
       return normalized;
     } catch (err) {
@@ -268,6 +288,10 @@ export const GarageProvider = ({ children }) => {
   };
 
   const updateInvoice = async (invoiceId, updates) => {
+    if (!invoiceId) {
+      console.error('Cannot update invoice: missing invoiceId');
+      return { success: false, message: 'Invoice ID is required' };
+    }
     try {
       const response = await apiService.invoices.update(invoiceId, updates);
       const normalized = normalizeInvoice(response.data);

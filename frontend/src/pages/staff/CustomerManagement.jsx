@@ -40,7 +40,13 @@ const CustomerManagement = () => {
     const openModal = (customer = null) => {
         if (customer) {
             setEditingCustomer(customer);
-            setFormData(customer);
+            setFormData({
+                name: customer.name || '',
+                nic: customer.nic || '',
+                phone: customer.phone || '',
+                email: customer.email || '',
+                address: customer.address || ''
+            });
         } else {
             setEditingCustomer(null);
             setFormData({ name: '', nic: '', phone: '', email: '', address: '' });

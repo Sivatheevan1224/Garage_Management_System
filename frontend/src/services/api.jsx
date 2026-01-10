@@ -9,8 +9,31 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
-    withCredentials: true, // For session authentication
+    withCredentials: true,
+    xsrfCookieName: 'csrftoken',
+    xsrfHeaderName: 'X-CSRFToken',
 });
+
+
+// Response interceptor to unwrap the standardized response
+api.interceptors.response.use(
+    (response) => {
+        // If the response follows the { status, message, data } format, return the data
+        if (response.data && response.data.status) {
+            return {
+                ...response,
+                data: response.data.data,
+                message: response.data.message, // Preserve message for feedback
+                status_overall: response.data.status
+            };
+        }
+        return response;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
 
 // API Service Object
 const apiService = {
@@ -27,11 +50,12 @@ const apiService = {
     vehicles: {
         getAll: () => api.get('/vehicles/'),
         getById: (id) => api.get(`/vehicles/${id}/`),
-        getByCustomer: (customerId) => api.get(`/vehicles/by_customer/?customer_id=${customerId}`),
+        getByCustomer: (customerId) => api.get(`/vehicles/?customer_id=${customerId}`),
         create: (data) => api.post('/vehicles/', data),
         update: (id, data) => api.put(`/vehicles/${id}/`, data),
         delete: (id) => api.delete(`/vehicles/${id}/`),
     },
+
 
     // Technician endpoints
     technicians: {
@@ -48,9 +72,10 @@ const apiService = {
         getById: (id) => api.get(`/services/${id}/`),
         create: (data) => api.post('/services/', data),
         update: (id, data) => api.put(`/services/${id}/`, data),
-        updateStatus: (id, status) => api.patch(`/services/${id}/update_status/`, { status }),
+        updateStatus: (id, status) => api.patch(`/services/${id}/status/`, { status }),
         delete: (id) => api.delete(`/services/${id}/`),
     },
+
 
     // Invoice endpoints
     invoices: {
@@ -65,28 +90,34 @@ const apiService = {
     payments: {
         getAll: () => api.get('/payments/'),
         getById: (id) => api.get(`/payments/${id}/`),
-        getByInvoice: (invoiceId) => api.get(`/payments/by_invoice/?invoice_id=${invoiceId}`),
+        getByInvoice: (invoiceId) => api.get(`/payments/?invoice_id=${invoiceId}`),
         create: (data) => api.post('/payments/', data),
         delete: (id) => api.delete(`/payments/${id}/`),
     },
 
+
     // User/Auth endpoints
     auth: {
-        register: (data) => api.post('/users/register/', data),
-        login: (email, password) => api.post('/users/login/', { email, password }),
-        getPendingApprovals: () => api.get('/users/pending_approvals/'),
-        approveUser: (userId, adminId) => api.post(`/users/${userId}/approve/`, { admin_id: adminId }),
-        deactivateUser: (userId) => api.post(`/users/${userId}/deactivate/`),
-        activateUser: (userId) => api.post(`/users/${userId}/activate/`),
+        register: (data) => api.post('/accounts/register/', data),
+        login: (email, password) => api.post('/accounts/login/', { email, password }),
+        getCsrfToken: () => api.get('/accounts/get-csrf/'),
+        getPendingApprovals: () => api.get('/accounts/pending-approvals/'),
+
+        approveUser: (userId) => api.post(`/accounts/approve/${userId}/`),
+        deactivateUser: (userId) => api.post(`/accounts/deactivate/${userId}/`),
+        activateUser: (userId) => api.post(`/accounts/activate/${userId}/`),
     },
+
 
     // User management endpoints
     users: {
-        getAll: () => api.get('/users/'),
-        getById: (id) => api.get(`/users/${id}/`),
-        update: (id, data) => api.patch(`/users/${id}/`, data),
-        delete: (id) => api.delete(`/users/${id}/`),
+        getAll: () => api.get('/accounts/users/'),
+        getById: (id) => api.get(`/accounts/users/${id}/`),
+        update: (id, data) => api.patch(`/accounts/users/${id}/`, data),
+        delete: (id) => api.delete(`/accounts/users/${id}/`),
     },
+
+
 
     // Billing settings endpoints
     billingSettings: {

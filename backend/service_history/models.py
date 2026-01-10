@@ -25,7 +25,9 @@ class Vehicle(models.Model):
     year = models.CharField(max_length=4)
     number = models.CharField(max_length=20, unique=True)
     color = models.CharField(max_length=30, null=True, blank=True)
+    fuel_type = models.CharField(max_length=20, default='Petrol')
     mileage = models.IntegerField(default=0)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -131,28 +133,7 @@ class Payment(models.Model):
         return f"{self.invoice.invoice_number} - ${self.amount}"
 
 
-class User(models.Model):
-    ROLE_CHOICES = [
-        ('admin', 'Admin'),
-        ('staff', 'Staff'),
-    ]
 
-    id = models.CharField(max_length=50, primary_key=True)
-    name = models.CharField(max_length=100)
-    email = models.EmailField(unique=True)
-    password = models.CharField(max_length=255)  # Bcrypt hashed
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='staff')
-    is_approved = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    approved_at = models.DateTimeField(null=True, blank=True)
-    approved_by = models.CharField(max_length=50, null=True, blank=True)
-
-    class Meta:
-        db_table = 'users'
-
-    def __str__(self):
-        return f"{self.name} ({self.role})"
 
 
 class BillingSetting(models.Model):

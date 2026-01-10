@@ -73,24 +73,6 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='User',
-            fields=[
-                ('id', models.CharField(max_length=50, primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=100)),
-                ('email', models.EmailField(max_length=254, unique=True)),
-                ('password', models.CharField(max_length=255)),
-                ('role', models.CharField(choices=[('admin', 'Admin'), ('staff', 'Staff')], default='staff', max_length=20)),
-                ('is_approved', models.BooleanField(default=False)),
-                ('is_active', models.BooleanField(default=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('approved_at', models.DateTimeField(blank=True, null=True)),
-                ('approved_by', models.CharField(blank=True, max_length=50, null=True)),
-            ],
-            options={
-                'db_table': 'users',
-            },
-        ),
-        migrations.CreateModel(
             name='Invoice',
             fields=[
                 ('id', models.CharField(max_length=50, primary_key=True, serialize=False)),
