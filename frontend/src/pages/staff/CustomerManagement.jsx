@@ -2,9 +2,10 @@
 import React, { useState } from 'react';
 import { useGarage } from '../../context/GarageContext';
 import { Plus, Search, Edit, Trash2, X } from 'lucide-react';
+import NotificationModal from '../../components/NotificationModal';
 
 const CustomerManagement = () => {
-    const { customers, addCustomer, updateCustomer, deleteCustomer } = useGarage();
+    const { customers, addCustomer, updateCustomer, deleteCustomer, notification, closeNotification, showNotification, showConfirmation } = useGarage();
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingCustomer, setEditingCustomer] = useState(null);
@@ -112,10 +113,12 @@ const CustomerManagement = () => {
                                         <button onClick={() => openModal(customer)} className="p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg transition-colors">
                                             <Edit size={16} />
                                         </button>
-                                        <button onClick={async () => {
-                                            if(window.confirm('Are you sure you want to delete this customer?')) {
+                                        <button onClick={() => {
+                                            showConfirmation('Delete Customer', 'Are you sure you want to delete this customer?', async () => {
                                                 await deleteCustomer(customer.id);
-                                            }
+                                                closeNotification();
+                                                showNotification('success', 'Deleted', 'Customer deleted successfully!');
+                                            }, 'Delete', 'Cancel');
                                         }} className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors">
                                             <Trash2 size={16} />
                                         </button>
@@ -182,6 +185,21 @@ const CustomerManagement = () => {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {/* Notification Modal */}
+            {notification && (
+                <NotificationModal
+                    isOpen={notification.isOpen}
+                    type={notification.type}
+                    title={notification.title}
+                    message={notification.message}
+                    onClose={closeNotification}
+                    onConfirm={notification.onConfirm}
+                    confirmText={notification.confirmText}
+                    cancelText={notification.cancelText}
+                    isConfirmation={notification.type === 'confirmation'}
+                />
             )}
         </div>
     );

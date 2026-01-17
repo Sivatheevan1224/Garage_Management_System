@@ -10,6 +10,9 @@ export const GarageProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // --- Notification State ---
+  const [notification, setNotification] = useState(null);
+
   // --- Data State ---
   const [customers, setCustomers] = useState([]);
   const [vehicles, setVehicles] = useState([]);
@@ -409,7 +412,13 @@ export const GarageProvider = ({ children }) => {
     getOverdueInvoices,
     getCustomerBalance,
     getRevenueReport,
-    refreshData: fetchData
+    refreshData: fetchData,
+    // Notification functions
+    notification,
+    showNotification: (type, title, message) => setNotification({ type, title, message, isOpen: true }),
+    showConfirmation: (title, message, onConfirm, confirmText = 'Confirm', cancelText = 'Cancel') => 
+      setNotification({ type: 'confirmation', title, message, isOpen: true, onConfirm, confirmText, cancelText }),
+    closeNotification: () => setNotification(null)
   };
 
   return (

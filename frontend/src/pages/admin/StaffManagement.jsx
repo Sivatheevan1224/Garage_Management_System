@@ -2,9 +2,10 @@
 import React, { useState } from 'react';
 import { useGarage } from '../../context/GarageContext';
 import { Plus, User, Trash2, Mail } from 'lucide-react';
+import NotificationModal from '../../components/NotificationModal';
 
 const StaffManagement = () => {
-    const { staffMembers, registerStaff, removeStaffMember, approveStaffMember, updateUserRole, currentUser } = useGarage();
+    const { staffMembers, registerStaff, removeStaffMember, approveStaffMember, updateUserRole, currentUser, notification, closeNotification, showNotification, showConfirmation } = useGarage();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [error, setError] = useState('');
     
@@ -24,7 +25,7 @@ const StaffManagement = () => {
                 setIsModalOpen(false);
                 setFormData({ name: '', email: '', password: '', role: 'staff' });
                 // Refresh logic is handled in context or we can force reload if needed, but context update is better
-                if(result.message) alert(result.message);
+                if(result.message) showNotification('success', 'Success', result.message);
             } else {
                 setError(result.message || 'Failed to create account');
             }
@@ -34,15 +35,19 @@ const StaffManagement = () => {
     };
 
     const handleApprove = async (id) => {
-        if(window.confirm('Approve this staff member?')) {
+        showConfirmation('Approve Staff Member', 'Are you sure you want to approve this staff member?', async () => {
             await approveStaffMember(id);
-        }
+            closeNotification();
+            showNotification('success', 'Approved', 'Staff member approved successfully!');
+        }, 'Approve', 'Cancel');
     }
 
     const handleRoleChange = async (id, newRole) => {
-        if(window.confirm(`Change user role to ${newRole}?`)) {
+        showConfirmation('Change User Role', `Change user role to ${newRole}?`, async () => {
             await updateUserRole(id, newRole);
-        }
+            closeNotification();
+            showNotification('success', 'Role Updated', `User role changed to ${newRole} successfully!`);
+        }, 'Change', 'Cancel');
     }
 
 
@@ -141,10 +146,12 @@ const StaffManagement = () => {
                             </div>
 
                             {currentUser?.id !== staff.id ? (
-                                <button onClick={async () => {
-                                    if(window.confirm('Are you sure you want to remove this staff member?')) {
+                                <button onClick={() => {
+                                    showConfirmation('Remove Staff Member', 'Are you sure you want to remove this staff member?', async () => {
                                         await removeStaffMember(staff.id);
-                                    }
+                                        closeNotification();
+                                        showNotification('success', 'Removed', 'Staff member removed successfully!');
+                                    }, 'Remove', 'Cancel');
                                 }} className="w-full py-2 border border-destructive/30 text-destructive rounded-lg hover:bg-destructive/5 transition-all flex items-center justify-center space-x-2">
                                     <Trash2 size={16} />
                                     <span>Remove Access</span>
@@ -199,6 +206,21 @@ const StaffManagement = () => {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {/* Notification Modal */}
+            {notification && (
+                <NotificationModal
+                    isOpen={notification.isOpen}
+                    type={notification.type}
+                    title={notification.title}
+                    message={notification.message}
+                    onClose={closeNotification}
+                    onConfirm={notification.onConfirm}
+                    confirmText={notification.confirmText}
+                    cancelText={notification.cancelText}
+                    isConfirmation={notification.type === 'confirmation'}
+                />
             )}
         </div>
     );
