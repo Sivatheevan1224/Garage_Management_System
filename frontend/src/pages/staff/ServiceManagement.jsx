@@ -3,10 +3,11 @@ import React, { useState } from 'react';
 import { useGarage } from '../../context/GarageContext';
 import { Plus, Search, Wrench, CheckCircle, Clock, X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import NotificationModal from '../../components/NotificationModal';
 
 const ServiceManagement = () => {
 
-    const { services, vehicles, technicians, addService, updateServiceStatus } = useGarage();
+    const { services, vehicles, technicians, addService, updateServiceStatus, notification, closeNotification, showNotification } = useGarage();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -105,8 +106,9 @@ const ServiceManagement = () => {
                                         <button onClick={async () => {
                                             try {
                                                 await updateServiceStatus(service.id, 'Completed');
+                                                showNotification('success', 'Success', 'Service marked as completed!');
                                             } catch (err) {
-                                                alert('Failed to update status.');
+                                                showNotification('error', 'Error', 'Failed to update status.');
                                             }
                                         }} className="bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1 rounded-md text-sm transition-all flex items-center space-x-1 border border-blue-200">
                                             <CheckCircle size={14} />
@@ -193,6 +195,21 @@ const ServiceManagement = () => {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {/* Notification Modal */}
+            {notification && (
+                <NotificationModal
+                    isOpen={notification.isOpen}
+                    type={notification.type}
+                    title={notification.title}
+                    message={notification.message}
+                    onClose={closeNotification}
+                    onConfirm={notification.onConfirm}
+                    confirmText={notification.confirmText}
+                    cancelText={notification.cancelText}
+                    isConfirmation={notification.type === 'confirmation'}
+                />
             )}
         </div>
     );

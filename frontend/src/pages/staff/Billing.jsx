@@ -2,6 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import { useGarage } from '../../context/GarageContext';
 import { useLocation } from 'react-router-dom';
+import NotificationModal from '../../components/NotificationModal';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { 
   Download, Printer, FileText, Plus, Edit2, Trash2, Eye, DollarSign,
   Calendar, CreditCard, Receipt, TrendingUp, AlertCircle, Search,
@@ -14,7 +17,8 @@ const Billing = () => {
       services, vehicles, customers, invoices, payments,
       createInvoice, updateInvoice, deleteInvoice, recordPayment,
       getInvoicePayments, getRevenueReport, getOutstandingInvoices,
-      getOverdueInvoices, getCustomerBalance, billingSettings
+      getOverdueInvoices, getCustomerBalance, billingSettings,
+      notification, closeNotification, showNotification, showConfirmation
     } = useGarage();
     
     const location = useLocation();
@@ -231,6 +235,9 @@ const Billing = () => {
                         updateInvoice={updateInvoice}
                         deleteInvoice={deleteInvoice}
                         StatusBadge={StatusBadge}
+                        showNotification={showNotification}
+                        showConfirmation={showConfirmation}
+                        closeNotification={closeNotification}
                     />
                 )}
 
@@ -255,6 +262,7 @@ const Billing = () => {
                     completedServices={completedServices}
                     createInvoice={createInvoice}
                     setSelectedInvoice={setSelectedInvoice}
+                    showNotification={showNotification}
                 />
             )}
 
@@ -264,6 +272,7 @@ const Billing = () => {
                     onClose={() => setShowPaymentModal(false)}
                     invoice={selectedInvoice}
                     recordPayment={recordPayment}
+                    showNotification={showNotification}
                 />
             )}
 
@@ -274,6 +283,21 @@ const Billing = () => {
                     getRevenueReport={getRevenueReport}
                 />
             )}
+
+            {/* Notification Modal */}
+            {notification && (
+                <NotificationModal
+                    isOpen={notification.isOpen}
+                    type={notification.type}
+                    title={notification.title}
+                    message={notification.message}
+                    onClose={closeNotification}
+                    onConfirm={notification.onConfirm}
+                    confirmText={notification.confirmText}
+                    cancelText={notification.cancelText}
+                    isConfirmation={notification.type === 'confirmation'}
+                />
+            )}
         </div>
     );
 };
@@ -281,7 +305,8 @@ const Billing = () => {
 // Invoices Tab Component
 const InvoicesTab = ({ 
     filteredInvoices, selectedInvoice, setSelectedInvoice, vehicles, customers, 
-    payments, getInvoicePayments, setShowPaymentModal, updateInvoice, deleteInvoice, StatusBadge 
+    payments, getInvoicePayments, setShowPaymentModal, updateInvoice, deleteInvoice, StatusBadge,
+    showNotification, showConfirmation, closeNotification
 }) => {
     return (
         <div className="flex flex-col lg:flex-row flex-1 min-h-0">
@@ -347,6 +372,9 @@ const InvoicesTab = ({
                         setShowPaymentModal={setShowPaymentModal}
                         updateInvoice={updateInvoice}
                         deleteInvoice={deleteInvoice}
+                        showNotification={showNotification}
+                        showConfirmation={showConfirmation}
+                        closeNotification={closeNotification}
                     />
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center text-gray-500">
@@ -360,7 +388,7 @@ const InvoicesTab = ({
 };
 
 // Invoice Detail View Component
-const InvoiceDetailView = ({ invoice, vehicles, customers, payments, setShowPaymentModal, updateInvoice, deleteInvoice }) => {
+const InvoiceDetailView = ({ invoice, vehicles, customers, payments, setShowPaymentModal, updateInvoice, deleteInvoice, showNotification, showConfirmation, closeNotification }) => {
     const vehicle = vehicles.find(v => v.id === invoice.vehicleId);
     const customer = customers.find(c => c.id === invoice.customerId);
     const [isEditing, setIsEditing] = useState(false);
@@ -368,24 +396,633 @@ const InvoiceDetailView = ({ invoice, vehicles, customers, payments, setShowPaym
     const handleStatusUpdate = async (newStatus) => {
         if (!invoice?.id) {
             console.error('Cannot update invoice: missing id', invoice);
-            alert('Cannot update invoice: missing ID');
+            showNotification('error', 'Error', 'Cannot update invoice: missing ID');
             return;
         }
         try {
             await updateInvoice(invoice.id, { status: newStatus });
+            showNotification('success', 'Success', 'Invoice status updated successfully!');
         } catch (err) {
-            alert('Failed to update invoice status.');
+            showNotification('error', 'Error', 'Failed to update invoice status.');
         }
     };
 
-    const handleDelete = async () => {
-        if (window.confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
+    const handleDelete = () => {
+        showConfirmation('Delete Invoice', 'Are you sure you want to delete this invoice? This action cannot be undone.', async () => {
             try {
                 await deleteInvoice(invoice.id);
+                closeNotification();
+                showNotification('success', 'Deleted', 'Invoice deleted successfully!');
                 // setSelectedInvoice(null); // This is handled by parent usually but good to keep in mind
             } catch (err) {
-                alert('Failed to delete invoice.');
+                closeNotification();
+                showNotification('error', 'Error', 'Failed to delete invoice.');
             }
+        }, 'Delete', 'Cancel');
+    };
+
+    const handlePrint = () => {
+        // Get the invoice content
+        const printContents = document.querySelector('.invoice-content');
+        if (!printContents) {
+            showNotification('error', 'Error', 'Invoice content not found');
+            return;
+        }
+
+        // Create a new window for printing
+        const printWindow = window.open('', '_blank', 'width=800,height=900');
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Invoice ${invoice.invoiceNumber}</title>
+                <style>
+                    @page { 
+                        size: A4; 
+                        margin: 15mm;
+                    }
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        font-size: 11px;
+                        line-height: 1.4;
+                        color: #333;
+                    }
+                    .invoice-container { max-width: 100%; }
+                    .header { 
+                        display: flex; 
+                        justify-content: space-between; 
+                        margin-bottom: 15px; 
+                        border-bottom: 2px solid #1e40af; 
+                        padding-bottom: 10px; 
+                    }
+                    .header h1 { font-size: 24px; color: #1e40af; margin-bottom: 3px; }
+                    .header .invoice-number { font-size: 12px; color: #666; }
+                    .header .company-info { text-align: right; }
+                    .header .company-info h2 { color: #1e40af; font-size: 16px; margin-bottom: 3px; }
+                    .header .company-info p { font-size: 10px; line-height: 1.3; }
+                    .bill-vehicle-grid { 
+                        display: grid; 
+                        grid-template-columns: 1fr 1fr; 
+                        gap: 15px; 
+                        margin: 15px 0; 
+                    }
+                    .section-title { 
+                        font-size: 9px; 
+                        font-weight: bold; 
+                        color: #666; 
+                        text-transform: uppercase; 
+                        letter-spacing: 0.5px; 
+                        margin-bottom: 5px; 
+                    }
+                    .section-content p { font-size: 11px; line-height: 1.4; margin: 2px 0; }
+                    .section-content .name { font-weight: bold; font-size: 12px; }
+                    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+                    th { 
+                        background: #1e40af; 
+                        color: white; 
+                        padding: 6px 8px; 
+                        text-align: left; 
+                        font-size: 10px; 
+                        font-weight: bold;
+                    }
+                    td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; font-size: 10px; }
+                    .item-description { font-weight: 600; margin-bottom: 2px; }
+                    .item-detail { color: #666; font-size: 9px; }
+                    .totals-section { 
+                        display: flex; 
+                        justify-content: flex-end; 
+                        margin-top: 15px; 
+                    }
+                    .totals-table { width: 250px; }
+                    .totals-table td { 
+                        padding: 4px 8px; 
+                        font-size: 10px;
+                        border-bottom: 1px solid #e5e7eb; 
+                    }
+                    .totals-table .total-row td { 
+                        font-size: 13px; 
+                        font-weight: bold; 
+                        background: #f3f4f6; 
+                        padding: 6px 8px;
+                        border-top: 2px solid #1e40af;
+                    }
+                    .totals-table .balance-row td { 
+                        font-size: 12px; 
+                        font-weight: bold; 
+                        padding: 5px 8px;
+                    }
+                    .payment-history { 
+                        margin-top: 15px; 
+                        padding-top: 10px; 
+                        border-top: 1px solid #e5e7eb; 
+                    }
+                    .payment-history h3 { font-size: 11px; margin-bottom: 8px; }
+                    .payment-item { 
+                        display: flex; 
+                        justify-content: space-between; 
+                        padding: 4px 8px; 
+                        background: #f0fdf4; 
+                        margin-bottom: 3px; 
+                        border-radius: 3px;
+                        font-size: 10px;
+                    }
+                    .notes-section { 
+                        margin-top: 15px; 
+                        padding-top: 10px; 
+                        border-top: 1px solid #e5e7eb; 
+                    }
+                    .notes-section h3 { font-size: 11px; margin-bottom: 5px; }
+                    .notes-section p { font-size: 10px; color: #666; }
+                    .footer { 
+                        margin-top: 15px; 
+                        padding-top: 10px; 
+                        border-top: 1px solid #e5e7eb; 
+                        text-align: center; 
+                    }
+                    .footer p { font-size: 9px; color: #666; }
+                    @media print {
+                        body { padding: 0; }
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="invoice-container">
+                    <div class="header">
+                        <div>
+                            <h1>INVOICE</h1>
+                            <p class="invoice-number">#${invoice.invoiceNumber}</p>
+                            <p style="font-size: 9px; color: #999; margin-top: 2px;">Created: ${new Date(invoice.dateCreated).toLocaleDateString()}</p>
+                        </div>
+                        <div class="company-info">
+                            <h2>ProGarage</h2>
+                            <p>123 Auto Lane</p>
+                            <p>Mechanic City, MC 90210</p>
+                            <p>(555) 123-4567</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bill-vehicle-grid">
+                        <div>
+                            <div class="section-title">Bill To</div>
+                            <div class="section-content">
+                                <p class="name">${customer?.name || 'N/A'}</p>
+                                <p>${customer?.email || ''}</p>
+                                <p>${customer?.phone || ''}</p>
+                                <p>${customer?.address || ''}</p>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="section-title">Vehicle Information</div>
+                            <div class="section-content">
+                                <p class="name">${vehicle?.brand || ''} ${vehicle?.model || ''}</p>
+                                <p style="font-family: monospace;">${vehicle?.number || ''}</p>
+                                <p>${vehicle?.year || ''}</p>
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <div class="section-title">Payment Terms</div>
+                                <div class="section-content">
+                                    <p>${invoice.paymentTerms || 'Net 30'}</p>
+                                    <p style="color: #666;">Due: ${new Date(invoice.dueDate).toLocaleDateString()}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50%;">Description</th>
+                                <th style="width: 10%; text-align: center;">Qty</th>
+                                <th style="width: 20%; text-align: right;">Rate</th>
+                                <th style="width: 20%; text-align: right;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${invoice.lineItems?.map(item => `
+                                <tr>
+                                    <td>
+                                        <div class="item-description">${item.description}</div>
+                                        ${item.detail ? `<div class="item-detail">${item.detail}</div>` : ''}
+                                    </td>
+                                    <td style="text-align: center; font-family: monospace;">${item.quantity}</td>
+                                    <td style="text-align: right; font-family: monospace;">LKR ${item.unitPrice.toFixed(2)}</td>
+                                    <td style="text-align: right; font-family: monospace; font-weight: bold;">LKR ${item.total.toFixed(2)}</td>
+                                </tr>
+                            `).join('') || '<tr><td colspan="4" style="text-align: center; padding: 20px;">No items</td></tr>'}
+                        </tbody>
+                    </table>
+                    
+                    <div class="totals-section">
+                        <table class="totals-table">
+                            <tr>
+                                <td>Subtotal:</td>
+                                <td style="text-align: right; font-family: monospace;">LKR ${invoice.subtotal.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td>Tax (${(invoice.taxRate * 100).toFixed(1)}%):</td>
+                                <td style="text-align: right; font-family: monospace;">LKR ${invoice.taxAmount.toFixed(2)}</td>
+                            </tr>
+                            ${invoice.discount > 0 ? `
+                            <tr>
+                                <td>Discount:</td>
+                                <td style="text-align: right; font-family: monospace; color: #dc2626;">-LKR ${invoice.discount.toFixed(2)}</td>
+                            </tr>
+                            ` : ''}
+                            <tr class="total-row">
+                                <td>Total:</td>
+                                <td style="text-align: right; font-family: monospace;">LKR ${invoice.total.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td>Paid:</td>
+                                <td style="text-align: right; font-family: monospace; color: #16a34a;">LKR ${invoice.paidAmount.toFixed(2)}</td>
+                            </tr>
+                            <tr class="balance-row">
+                                <td>Balance Due:</td>
+                                <td style="text-align: right; font-family: monospace; color: ${invoice.balancedue > 0 ? '#dc2626' : '#16a34a'};">
+                                    LKR ${invoice.balancedue.toFixed(2)}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    ${payments.length > 0 ? `
+                    <div class="payment-history">
+                        <h3>Payment History</h3>
+                        ${payments.map(payment => `
+                            <div class="payment-item">
+                                <div>
+                                    <span style="font-weight: 600; color: #15803d;">
+                                        ${payment.method.charAt(0).toUpperCase() + payment.method.slice(1)}
+                                    </span>
+                                    ${payment.reference ? `<span style="color: #16a34a;"> #${payment.reference}</span>` : ''}
+                                    <span style="font-size: 9px; color: #666; display: block;">
+                                        ${new Date(payment.date).toLocaleDateString()}
+                                    </span>
+                                </div>
+                                <span style="font-family: monospace; font-weight: bold; color: #15803d;">
+                                    LKR ${payment.amount.toFixed(2)}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ` : ''}
+                    
+                    ${invoice.notes ? `
+                    <div class="notes-section">
+                        <h3>Notes</h3>
+                        <p>${invoice.notes}</p>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="footer">
+                        <p style="font-weight: 600; margin-bottom: 2px;">Thank you for choosing ProGarage!</p>
+                        <p>Questions? Contact us at billing@progarage.com</p>
+                    </div>
+                </div>
+                <script>
+                    window.onload = function() {
+                        setTimeout(() => {
+                            window.print();
+                        }, 500);
+                    };
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    };
+
+    const handleDownloadPDF_OLD = () => {
+        // Get the invoice content
+        const printContents = document.querySelector('.invoice-content');
+        if (!printContents) {
+            showNotification('error', 'Error', 'Invoice content not found');
+            return;
+        }
+
+        // Create a new window for PDF generation with the same content as print
+        const printWindow = window.open('', '_blank', 'width=800,height=900');
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Invoice ${invoice.invoiceNumber}</title>
+                <style>
+                    @page { 
+                        size: A4; 
+                        margin: 15mm;
+                    }
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        font-size: 11px;
+                        line-height: 1.4;
+                        color: #333;
+                    }
+                    .invoice-container { max-width: 100%; }
+                    .header { 
+                        display: flex; 
+                        justify-content: space-between; 
+                        margin-bottom: 15px; 
+                        border-bottom: 2px solid #1e40af; 
+                        padding-bottom: 10px; 
+                    }
+                    .header h1 { font-size: 24px; color: #1e40af; margin-bottom: 3px; }
+                    .header .invoice-number { font-size: 12px; color: #666; }
+                    .header .company-info { text-align: right; }
+                    .header .company-info h2 { color: #1e40af; font-size: 16px; margin-bottom: 3px; }
+                    .header .company-info p { font-size: 10px; line-height: 1.3; }
+                    .bill-vehicle-grid { 
+                        display: grid; 
+                        grid-template-columns: 1fr 1fr; 
+                        gap: 15px; 
+                        margin: 15px 0; 
+                    }
+                    .section-title { 
+                        font-size: 9px; 
+                        font-weight: bold; 
+                        color: #666; 
+                        text-transform: uppercase; 
+                        letter-spacing: 0.5px; 
+                        margin-bottom: 5px; 
+                    }
+                    .section-content p { font-size: 11px; line-height: 1.4; margin: 2px 0; }
+                    .section-content .name { font-weight: bold; font-size: 12px; }
+                    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+                    th { 
+                        background: #1e40af; 
+                        color: white; 
+                        padding: 6px 8px; 
+                        text-align: left; 
+                        font-size: 10px; 
+                        font-weight: bold;
+                    }
+                    td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; font-size: 10px; }
+                    .item-description { font-weight: 600; margin-bottom: 2px; }
+                    .item-detail { color: #666; font-size: 9px; }
+                    .totals-section { 
+                        display: flex; 
+                        justify-content: flex-end; 
+                        margin-top: 15px; 
+                    }
+                    .totals-table { width: 250px; }
+                    .totals-table td { 
+                        padding: 4px 8px; 
+                        font-size: 10px;
+                        border-bottom: 1px solid #e5e7eb; 
+                    }
+                    .totals-table .total-row td { 
+                        font-size: 13px; 
+                        font-weight: bold; 
+                        background: #f3f4f6; 
+                        padding: 6px 8px;
+                        border-top: 2px solid #1e40af;
+                    }
+                    .totals-table .balance-row td { 
+                        font-size: 12px; 
+                        font-weight: bold; 
+                        padding: 5px 8px;
+                    }
+                    .payment-history { 
+                        margin-top: 15px; 
+                        padding-top: 10px; 
+                        border-top: 1px solid #e5e7eb; 
+                    }
+                    .payment-history h3 { font-size: 11px; margin-bottom: 8px; }
+                    .payment-item { 
+                        display: flex; 
+                        justify-content: space-between; 
+                        padding: 4px 8px; 
+                        background: #f0fdf4; 
+                        margin-bottom: 3px; 
+                        border-radius: 3px;
+                        font-size: 10px;
+                    }
+                    .notes-section { 
+                        margin-top: 15px; 
+                        padding-top: 10px; 
+                        border-top: 1px solid #e5e7eb; 
+                    }
+                    .notes-section h3 { font-size: 11px; margin-bottom: 5px; }
+                    .notes-section p { font-size: 10px; color: #666; }
+                    .footer { 
+                        margin-top: 15px; 
+                        padding-top: 10px; 
+                        border-top: 1px solid #e5e7eb; 
+                        text-align: center; 
+                    }
+                    .footer p { font-size: 9px; color: #666; }
+                    @media print {
+                        body { padding: 0; }
+                        .no-print { display: none; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="invoice-container">
+                    <div class="header">
+                        <div>
+                            <h1>INVOICE</h1>
+                            <p class="invoice-number">#${invoice.invoiceNumber}</p>
+                            <p style="font-size: 9px; color: #999; margin-top: 2px;">Created: ${new Date(invoice.dateCreated).toLocaleDateString()}</p>
+                        </div>
+                        <div class="company-info">
+                            <h2>ProGarage</h2>
+                            <p>123 Auto Lane</p>
+                            <p>Mechanic City, MC 90210</p>
+                            <p>(555) 123-4567</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bill-vehicle-grid">
+                        <div>
+                            <div class="section-title">Bill To</div>
+                            <div class="section-content">
+                                <p class="name">${customer?.name || 'N/A'}</p>
+                                <p>${customer?.email || ''}</p>
+                                <p>${customer?.phone || ''}</p>
+                                <p>${customer?.address || ''}</p>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="section-title">Vehicle Information</div>
+                            <div class="section-content">
+                                <p class="name">${vehicle?.brand || ''} ${vehicle?.model || ''}</p>
+                                <p style="font-family: monospace;">${vehicle?.number || ''}</p>
+                                <p>${vehicle?.year || ''}</p>
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <div class="section-title">Payment Terms</div>
+                                <div class="section-content">
+                                    <p>${invoice.paymentTerms || 'Net 30'}</p>
+                                    <p style="color: #666;">Due: ${new Date(invoice.dueDate).toLocaleDateString()}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50%;">Description</th>
+                                <th style="width: 10%; text-align: center;">Qty</th>
+                                <th style="width: 20%; text-align: right;">Rate</th>
+                                <th style="width: 20%; text-align: right;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${invoice.lineItems?.map(item => `
+                                <tr>
+                                    <td>
+                                        <div class="item-description">${item.description}</div>
+                                        ${item.detail ? `<div class="item-detail">${item.detail}</div>` : ''}
+                                    </td>
+                                    <td style="text-align: center; font-family: monospace;">${item.quantity}</td>
+                                    <td style="text-align: right; font-family: monospace;">LKR ${item.unitPrice.toFixed(2)}</td>
+                                    <td style="text-align: right; font-family: monospace; font-weight: bold;">LKR ${item.total.toFixed(2)}</td>
+                                </tr>
+                            `).join('') || '<tr><td colspan="4" style="text-align: center; padding: 20px;">No items</td></tr>'}
+                        </tbody>
+                    </table>
+                    
+                    <div class="totals-section">
+                        <table class="totals-table">
+                            <tr>
+                                <td>Subtotal:</td>
+                                <td style="text-align: right; font-family: monospace;">LKR ${invoice.subtotal.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td>Tax (${(invoice.taxRate * 100).toFixed(1)}%):</td>
+                                <td style="text-align: right; font-family: monospace;">LKR ${invoice.taxAmount.toFixed(2)}</td>
+                            </tr>
+                            ${invoice.discount > 0 ? `
+                            <tr>
+                                <td>Discount:</td>
+                                <td style="text-align: right; font-family: monospace; color: #dc2626;">-LKR ${invoice.discount.toFixed(2)}</td>
+                            </tr>
+                            ` : ''}
+                            <tr class="total-row">
+                                <td>Total:</td>
+                                <td style="text-align: right; font-family: monospace;">LKR ${invoice.total.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td>Paid:</td>
+                                <td style="text-align: right; font-family: monospace; color: #16a34a;">LKR ${invoice.paidAmount.toFixed(2)}</td>
+                            </tr>
+                            <tr class="balance-row">
+                                <td>Balance Due:</td>
+                                <td style="text-align: right; font-family: monospace; color: ${invoice.balancedue > 0 ? '#dc2626' : '#16a34a'};">
+                                    LKR ${invoice.balancedue.toFixed(2)}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    ${payments.length > 0 ? `
+                    <div class="payment-history">
+                        <h3>Payment History</h3>
+                        ${payments.map(payment => `
+                            <div class="payment-item">
+                                <div>
+                                    <span style="font-weight: 600; color: #15803d;">
+                                        ${payment.method.charAt(0).toUpperCase() + payment.method.slice(1)}
+                                    </span>
+                                    ${payment.reference ? `<span style="color: #16a34a;"> #${payment.reference}</span>` : ''}
+                                    <span style="font-size: 9px; color: #666; display: block;">
+                                        ${new Date(payment.date).toLocaleDateString()}
+                                    </span>
+                                </div>
+                                <span style="font-family: monospace; font-weight: bold; color: #15803d;">
+                                    LKR ${payment.amount.toFixed(2)}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ` : ''}
+                    
+                    ${invoice.notes ? `
+                    <div class="notes-section">
+                        <h3>Notes</h3>
+                        <p>${invoice.notes}</p>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="footer">
+                        <p style="font-weight: 600; margin-bottom: 2px;">Thank you for choosing ProGarage!</p>
+                        <p>Questions? Contact us at billing@progarage.com</p>
+                    </div>
+                </div>
+                <script>
+                    window.onload = function() {
+                        setTimeout(() => {
+                            window.print();
+                        }, 500);
+                    };
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        
+        showNotification('info', 'Save as PDF', 'Select "Save as PDF" as the printer destination in the print dialog');
+    };
+
+    const handleDownloadPDF = async () => {
+        // Get the invoice content
+        const invoiceElement = document.querySelector('.invoice-content');
+        if (!invoiceElement) {
+            showNotification('error', 'Error', 'Invoice content not found');
+            return;
+        }
+
+        try {
+            showNotification('info', 'Generating PDF', 'Please wait while we generate your PDF...');
+            
+            // Create a clone of the invoice for PDF generation
+            const clonedInvoice = invoiceElement.cloneNode(true);
+            clonedInvoice.style.width = '210mm'; // A4 width
+            clonedInvoice.style.padding = '10mm';
+            clonedInvoice.style.backgroundColor = 'white';
+            clonedInvoice.style.position = 'absolute';
+            clonedInvoice.style.left = '-9999px';
+            clonedInvoice.style.top = '0';
+            document.body.appendChild(clonedInvoice);
+
+            // Convert HTML to canvas
+            const canvas = await html2canvas(clonedInvoice, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff',
+                windowWidth: 794, // A4 width in pixels at 96 DPI
+                windowHeight: 1123 // A4 height in pixels at 96 DPI
+            });
+
+            // Remove the cloned element
+            document.body.removeChild(clonedInvoice);
+
+            // Get canvas dimensions
+            const imgWidth = 210; // A4 width in mm
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
+            // Create PDF
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const imgData = canvas.toDataURL('image/png');
+            
+            // Add image to PDF
+            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+            
+            // Save PDF
+            pdf.save(`Invoice_${invoice.invoiceNumber}.pdf`);
+            
+            closeNotification();
+            showNotification('success', 'PDF Downloaded', `Invoice ${invoice.invoiceNumber}.pdf has been downloaded successfully!`);
+        } catch (error) {
+            console.error('PDF generation error:', error);
+            closeNotification();
+            showNotification('error', 'Error', 'Failed to generate PDF. Please try again.');
         }
     };
 
@@ -416,11 +1053,17 @@ const InvoiceDetailView = ({ invoice, vehicles, customers, payments, setShowPaym
                             <span>Record Payment</span>
                         </button>
                     )}
-                    <button className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-all text-sm">
+                    <button 
+                        onClick={handlePrint}
+                        className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-all text-sm"
+                    >
                         <Printer size={16} />
                         <span className="hidden sm:inline">Print</span>
                     </button>
-                    <button className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm">
+                    <button 
+                        onClick={handleDownloadPDF}
+                        className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm"
+                    >
                         <Download size={16} />
                         <span className="hidden sm:inline">PDF</span>
                     </button>
@@ -435,7 +1078,7 @@ const InvoiceDetailView = ({ invoice, vehicles, customers, payments, setShowPaym
 
             {/* Invoice Content */}
             <div className="flex-1 overflow-y-auto p-4 lg:p-6 bg-gray-50">
-                <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-6 lg:p-8">
+                <div className="invoice-content max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-6 lg:p-8">
                     {/* Header */}
                     <div className="flex flex-col lg:flex-row justify-between items-start gap-6 mb-8">
                         <div>
@@ -850,7 +1493,7 @@ const SettingsTab = ({ billingSettings }) => {
 };
 
 // Create Invoice Modal Component
-const CreateInvoiceModal = ({ isOpen, onClose, completedServices, createInvoice, setSelectedInvoice }) => {
+const CreateInvoiceModal = ({ isOpen, onClose, completedServices, createInvoice, setSelectedInvoice, showNotification }) => {
     const [selectedServiceId, setSelectedServiceId] = useState('');
     const [lineItems, setLineItems] = useState([]);
     const [discount, setDiscount] = useState(0);
@@ -917,9 +1560,10 @@ const CreateInvoiceModal = ({ isOpen, onClose, completedServices, createInvoice,
             if (invoice) {
                 setSelectedInvoice(invoice);
                 onClose();
+                showNotification('success', 'Success', 'Invoice created successfully!');
             }
         } catch (err) {
-            alert('Failed to create invoice.');
+            showNotification('error', 'Error', 'Failed to create invoice.');
         }
     };
 
@@ -1095,7 +1739,7 @@ const CreateInvoiceModal = ({ isOpen, onClose, completedServices, createInvoice,
 };
 
 // Payment Modal Component
-const PaymentModal = ({ isOpen, onClose, invoice, recordPayment }) => {
+const PaymentModal = ({ isOpen, onClose, invoice, recordPayment, showNotification }) => {
     const [amount, setAmount] = useState(invoice.balancedue);
     const [method, setMethod] = useState('cash');
     const [reference, setReference] = useState('');
@@ -1115,8 +1759,9 @@ const PaymentModal = ({ isOpen, onClose, invoice, recordPayment }) => {
             });
 
             onClose();
+            showNotification('success', 'Success', 'Payment recorded successfully!');
         } catch (err) {
-            alert('Failed to record payment.');
+            showNotification('error', 'Error', 'Failed to record payment.');
         }
     };
 
