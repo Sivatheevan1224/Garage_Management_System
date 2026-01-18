@@ -1,11 +1,10 @@
 
 import React, { useState } from 'react';
 import { useGarage } from '../../context/GarageContext';
-import { Plus, User, Trash2, Mail } from 'lucide-react';
-import NotificationModal from '../../components/NotificationModal';
+import { Plus, User, Users, Trash2, Mail, AlertCircle, ShieldCheck, UserPlus, Clock, CheckCircle, XCircle } from 'lucide-react';
 
 const StaffManagement = () => {
-    const { staffMembers, registerStaff, removeStaffMember, approveStaffMember, updateUserRole, currentUser, notification, closeNotification, showNotification, showConfirmation } = useGarage();
+    const { staffMembers, registerStaff, deactivateStaffMember, approveStaffMember, updateUserRole, currentUser, notification, closeNotification, showNotification, showConfirmation } = useGarage();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [error, setError] = useState('');
     
@@ -14,7 +13,7 @@ const StaffManagement = () => {
     });
 
     const pendingStaff = staffMembers?.filter(s => !s.is_approved) || [];
-    const activeStaff = staffMembers?.filter(s => s.is_approved) || [];
+    const activeStaff = staffMembers?.filter(s => s.is_approved && s.is_active) || [];
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -24,13 +23,13 @@ const StaffManagement = () => {
             if (result.success) {
                 setIsModalOpen(false);
                 setFormData({ name: '', email: '', password: '', role: 'staff' });
-                // Refresh logic is handled in context or we can force reload if needed, but context update is better
                 if(result.message) showNotification('success', 'Success', result.message);
             } else {
+                // Display backend error message properly
                 setError(result.message || 'Failed to create account');
             }
         } catch (err) {
-            setError('An error occurred. Please try again.');
+            setError('Unable to connect to server. Please try again later.');
         }
     };
 
@@ -52,113 +51,156 @@ const StaffManagement = () => {
 
 
     return (
-        <div className="space-y-8">
-            <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-foreground">Staff Management</h2>
-                <button onClick={() => setIsModalOpen(true)} className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all shadow-sm">
-                    <Plus size={18} />
-                    <span>Add New Staff</span>
+        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
+                <div>
+                    <h2 className="text-4xl font-extrabold text-slate-800 tracking-tight flex items-center gap-3">
+                        <Users className="text-blue-600" size={36} />
+                        Staff Control
+                    </h2>
+                    <p className="text-slate-500 mt-2 font-medium">Manage permissions, roles, and administrative access.</p>
+                </div>
+                <button 
+                    onClick={() => setIsModalOpen(true)} 
+                    className="group bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl flex items-center space-x-3 transition-all duration-300 shadow-lg shadow-blue-200 hover:-translate-y-1"
+                >
+                    <div className="bg-white/20 p-1 rounded-lg group-hover:rotate-90 transition-transform">
+                        <Plus size={20} />
+                    </div>
+                    <span className="font-bold">Add New Staff</span>
                 </button>
-            </div>
+            </header>
 
             {/* Pending Approvals Section */}
             {pendingStaff.length > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
-                    <h3 className="text-lg font-bold text-amber-900 mb-4 flex items-center gap-2">
-                        <User className="h-5 w-5" />
-                        Pending Approvals
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {pendingStaff.map(staff => (
-                            <div key={staff.id} className="bg-white rounded-xl border border-amber-100 p-6 flex flex-col items-center text-center shadow-sm">
-                                <div className="w-16 h-16 rounded-full bg-amber-100 mb-3 flex items-center justify-center">
-                                    <User size={30} className="text-amber-600" />
-                                </div>
-                                <h4 className="text-lg font-bold text-foreground">{staff.name}</h4>
-                                <p className="text-muted-foreground text-sm mb-4">{staff.email}</p>
-                                <div className="flex gap-2 w-full">
-                                    <button 
-                                        onClick={() => handleApprove(staff.id)}
-                                        className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-2 rounded-lg text-sm font-medium transition-colors"
-                                    >
-                                        Approve
-                                    </button>
-                                    <button 
-                                        onClick={() => removeStaffMember(staff.id)}
-                                        className="flex-1 bg-white border border-destructive/30 text-destructive hover:bg-destructive/5 py-2 rounded-lg text-sm font-medium transition-colors"
-                                    >
-                                        Reject
-                                    </button>
-                                </div>
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-[2rem] p-8 shadow-sm relative overflow-hidden">
+                    <div className="relative z-10">
+                        <div className="flex items-center gap-4 mb-6">
+                            <div className="w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-amber-200">
+                                <Clock size={20} />
                             </div>
-                        ))}
+                            <div>
+                                <h3 className="text-xl font-bold text-amber-900">Pending Approvals</h3>
+                                <p className="text-amber-700/70 text-sm font-medium">New registrations awaiting access.</p>
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {pendingStaff.map(staff => (
+                                <div key={staff.id} className="group bg-white rounded-2xl border border-amber-100 p-6 flex flex-col items-center text-center shadow-sm hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
+                                    <div className="w-16 h-16 rounded-full bg-amber-50 mb-3 flex items-center justify-center relative group-hover:scale-110 transition-transform">
+                                        <User size={30} className="text-amber-600" />
+                                        <div className="absolute -bottom-1 -right-1 bg-white p-1 rounded-full shadow-md">
+                                            <AlertCircle size={14} className="text-amber-500" />
+                                        </div>
+                                    </div>
+                                    <h4 className="text-lg font-bold text-slate-800">{staff.name}</h4>
+                                    <p className="text-slate-400 text-xs mb-4 font-medium">{staff.email}</p>
+                                    <div className="flex gap-2 w-full">
+                                        <button 
+                                            onClick={() => handleApprove(staff.id)}
+                                            className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-2.5 rounded-lg text-xs font-bold transition-all shadow-md shadow-amber-100 flex items-center justify-center gap-2"
+                                        >
+                                            <CheckCircle size={14} /> Approve
+                                        </button>
+                                        <button 
+                                            onClick={() => removeStaffMember(staff.id)}
+                                            className="p-2.5 bg-red-50 text-red-500 hover:bg-red-100 rounded-lg transition-colors"
+                                            title="Reject"
+                                        >
+                                            <XCircle size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
 
             {/* Active Staff Section */}
             <div>
-                <h3 className="text-lg font-bold text-foreground mb-4">Active Staff Members</h3>
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 shadow-sm">
+                        <ShieldCheck size={20} />
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-800">Verified Personnel</h3>
+                </div>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {activeStaff.map(staff => (
-                        <div key={staff.id} className="bg-white rounded-xl border border-border p-6 flex flex-col items-center text-center shadow-sm hover:shadow-md transition-all">
-                            <div className="w-20 h-20 rounded-full bg-muted mb-4 flex items-center justify-center">
-                                <User size={40} className="text-muted-foreground" />
+                        <div key={staff.id} className="group bg-white rounded-2xl border border-slate-200 p-6 flex flex-col items-center text-center shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-500">
+                            <div className="relative mb-4">
+                                <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-blue-50 transition-colors duration-500">
+                                    <User size={40} className="text-slate-300 group-hover:text-blue-400 transition-colors" />
+                                </div>
+                                <div className={`absolute bottom-0 right-1 w-5 h-5 rounded-full border-2 border-white shadow-sm ${staff.role === 'admin' ? 'bg-blue-500' : 'bg-slate-300'}`} />
                             </div>
-                            <h3 className="text-xl font-bold text-foreground">{staff.name}</h3>
+                            <h3 className="text-xl font-bold text-slate-800 tracking-tight">{staff.name}</h3>
+                            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-0.5 mb-5 flex items-center gap-1.5 justify-center">
+                                {staff.role === 'admin' ? <ShieldCheck size={10} className="text-blue-500" /> : <User size={10} />}
+                                {staff.role} Rank
+                            </p>
                             
                             {/* Role Toggle Switch */}
-                            <div className="mb-6 flex justify-center">
+                            <div className="mb-6 w-full">
                                 {currentUser?.id !== staff.id ? (
-                                    <div 
-                                        onClick={() => handleRoleChange(staff.id, staff.role === 'admin' ? 'staff' : 'admin')}
-                                        className={`relative w-36 h-10 rounded-full cursor-pointer transition-all duration-500 ease-in-out flex items-center p-1 shadow-inner select-none ${staff.role === 'admin' ? 'bg-gradient-to-r from-primary to-accent' : 'bg-gray-200'}`}
-                                    >
-                                        {/* Labels Background */}
-                                        <div className="absolute inset-0 flex items-center justify-between px-3 w-full h-full text-[10px] font-extrabold uppercase tracking-widest z-0 pointer-events-none">
-                                            <span className={`text-white transition-opacity duration-300 ${staff.role === 'admin' ? 'opacity-100' : 'opacity-0'}`}>
-                                                Admin
-                                            </span>
-                                            <span className={`text-gray-500 transition-opacity duration-300 ${staff.role === 'admin' ? 'opacity-0' : 'opacity-100'}`}>
-                                                Staff
-                                            </span>
-                                        </div>
-
-                                        {/* Toggle Knob */}
+                                    <div className="flex flex-col items-center">
                                         <div 
-                                            className={`relative z-10 w-8 h-8 bg-white rounded-full shadow-lg transform transition-all duration-500 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] flex items-center justify-center ${staff.role === 'admin' ? 'translate-x-[6.5rem]' : 'translate-x-0'}`}
+                                            onClick={() => handleRoleChange(staff.id, staff.role === 'admin' ? 'staff' : 'admin')}
+                                            className={`relative w-36 h-10 rounded-full cursor-pointer transition-all duration-500 ease-in-out flex items-center p-1.5 shadow-inner select-none ${staff.role === 'admin' ? 'bg-gradient-to-r from-blue-600 to-indigo-600' : 'bg-slate-200'}`}
                                         >
-                                            <User size={16} className={`${staff.role === 'admin' ? 'text-primary' : 'text-gray-400'}`} />
+                                            {/* Labels Background */}
+                                            <div className="absolute inset-0 flex items-center justify-between px-4 w-full h-full text-[10px] font-black uppercase tracking-widest z-0 pointer-events-none">
+                                                <span className={`text-white transition-opacity duration-300 ${staff.role === 'admin' ? 'opacity-100' : 'opacity-0'}`}>
+                                                    Admin
+                                                </span>
+                                                <span className={`text-slate-500 transition-opacity duration-300 ${staff.role === 'admin' ? 'opacity-0' : 'opacity-100'}`}>
+                                                    Staff
+                                                </span>
+                                            </div>
+
+                                            {/* Toggle Knob */}
+                                            <div 
+                                                className={`relative z-10 w-7 h-7 bg-white rounded-full shadow-lg transform transition-all duration-500 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] flex items-center justify-center ${staff.role === 'admin' ? 'translate-x-[6.2rem]' : 'translate-x-0'}`}
+                                            >
+                                                <ShieldCheck size={14} className={`${staff.role === 'admin' ? 'text-blue-600' : 'text-slate-400'}`} />
+                                            </div>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="bg-primary/10 border border-primary/20 text-primary px-6 py-2 rounded-full font-bold text-xs uppercase tracking-wider shadow-sm">
-                                        {staff.role}
+                                    <div className="bg-blue-50 border border-blue-100 text-blue-600 px-5 py-2 rounded-xl font-bold text-[10px] uppercase tracking-widest shadow-sm inline-block">
+                                        Root Access
                                     </div>
                                 )}
                             </div>
                             
-                            <div className="w-full text-left space-y-3 mb-6">
-                                <div className="flex items-center space-x-3 text-muted-foreground">
-                                    <Mail size={16} />
-                                    <span className="text-sm">{staff.email}</span>
+                            <div className="w-full text-left space-y-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                <div className="flex items-center space-x-2.5 text-slate-600">
+                                    <Mail size={14} className="text-slate-400" />
+                                    <span className="text-sm font-semibold truncate">{staff.email}</span>
+                                </div>
+                                <div className="flex items-center space-x-2.5 text-slate-600">
+                                    <ShieldCheck size={14} className="text-slate-400" />
+                                    <span className="text-[10px] font-bold uppercase tracking-wider">Access Verified</span>
                                 </div>
                             </div>
 
                             {currentUser?.id !== staff.id ? (
                                 <button onClick={() => {
-                                    showConfirmation('Remove Staff Member', 'Are you sure you want to remove this staff member?', async () => {
-                                        await removeStaffMember(staff.id);
+                                    showConfirmation('Revoke Access', `Are you sure you want to revoke access for ${staff.name}? Their record will be kept but they will no longer be able to log in.`, async () => {
+                                        await deactivateStaffMember(staff.id);
                                         closeNotification();
-                                        showNotification('success', 'Removed', 'Staff member removed successfully!');
-                                    }, 'Remove', 'Cancel');
-                                }} className="w-full py-2 border border-destructive/30 text-destructive rounded-lg hover:bg-destructive/5 transition-all flex items-center justify-center space-x-2">
-                                    <Trash2 size={16} />
-                                    <span>Remove Access</span>
+                                        showNotification('success', 'Access Revoked', 'Staff member access has been revoked.');
+                                    }, 'Revoke', 'Cancel');
+                                }} className="group/btn w-full py-3 bg-white border border-red-200 text-red-500 rounded-xl hover:bg-red-50 transition-all duration-300 flex items-center justify-center space-x-2 font-bold shadow-sm shadow-red-50">
+                                    <Trash2 size={16} className="group-hover/btn:rotate-12 transition-transform" />
+                                    <span className="text-sm">Revoke Authorization</span>
                                 </button>
                             ) : (
-                                <div className="w-full py-2 border border-gray-200 text-gray-400 rounded-lg flex items-center justify-center space-x-2 bg-gray-50 cursor-not-allowed">
-                                    <span className="text-sm font-medium">Current User</span>
+                                <div className="w-full py-3 bg-slate-100 text-slate-400 rounded-xl flex items-center justify-center space-x-2 border border-slate-200 cursor-not-allowed">
+                                    <ShieldCheck size={16} />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest">Master Key</span>
                                 </div>
                             )}
                         </div>
@@ -173,6 +215,12 @@ const StaffManagement = () => {
                          <div className="border-b border-border pb-4 mb-4">
                             <h3 className="text-xl font-bold text-foreground">Add Staff Member</h3>
                         </div>
+                        {error && (
+                            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 text-red-500 rounded-lg text-sm flex items-center gap-2">
+                                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                                <span>{error}</span>
+                            </div>
+                        )}
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-sm text-muted-foreground mb-1">Full Name</label>
@@ -208,20 +256,7 @@ const StaffManagement = () => {
                 </div>
             )}
 
-            {/* Notification Modal */}
-            {notification && (
-                <NotificationModal
-                    isOpen={notification.isOpen}
-                    type={notification.type}
-                    title={notification.title}
-                    message={notification.message}
-                    onClose={closeNotification}
-                    onConfirm={notification.onConfirm}
-                    confirmText={notification.confirmText}
-                    cancelText={notification.cancelText}
-                    isConfirmation={notification.type === 'confirmation'}
-                />
-            )}
+
         </div>
     );
 };

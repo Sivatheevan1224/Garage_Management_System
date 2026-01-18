@@ -40,7 +40,7 @@ export const GarageProvider = ({ children }) => {
     taxAmount: parseFloat(inv.taxAmount) || 0,
     total: parseFloat(inv.total) || 0,
     paidAmount: parseFloat(inv.paidAmount) || 0,
-    balancedue: parseFloat(inv.balancedue) || 0,
+    balanceDue: parseFloat(inv.balanceDue) || 0,
     taxRate: parseFloat(inv.taxRate) || 0
   });
 
@@ -69,6 +69,7 @@ export const GarageProvider = ({ children }) => {
   // --- Initial Data Fetching ---
   const fetchData = async () => {
     setLoading(true);
+    setNotification(null); // Clear notifications on data refresh
     try {
       const fetchPromises = [
 
@@ -130,6 +131,7 @@ export const GarageProvider = ({ children }) => {
   // Auth Operations
   const login = async (email, password) => {
     try {
+      setNotification(null); // Clear any leftover notifications before login
       const response = await apiService.auth.login(email, password);
       // Interceptor has unwrapped the data field
       if (response.status_overall === 'success' || response.data.user) {
@@ -140,12 +142,16 @@ export const GarageProvider = ({ children }) => {
       }
       return { success: false, message: response.message || 'Login failed' };
     } catch (err) {
-      return handleApiError(err);
+      // Extract error message from backend response
+      const errorResult = handleApiError(err);
+      console.error('Login error:', errorResult);
+      return errorResult;
     }
   };
 
   const logout = () => {
     setCurrentUser(null);
+    setNotification(null);
   };
 
   const registerStaff = async (data) => {
@@ -177,6 +183,16 @@ export const GarageProvider = ({ children }) => {
           await apiService.auth.approveUser(id, adminId);
           // Update local state
           setStaffMembers(prev => prev.map(s => s.id === id ? { ...s, is_approved: true } : s));
+          return { success: true };
+      } catch (err) {
+          return handleApiError(err);
+      }
+  };
+
+  const deactivateStaffMember = async (id) => {
+      try {
+          await apiService.auth.deactivateUser(id);
+          setStaffMembers(prev => prev.map(s => s.id === id ? { ...s, is_active: false, is_approved: false } : s));
           return { success: true };
       } catch (err) {
           return handleApiError(err);
@@ -254,11 +270,8 @@ export const GarageProvider = ({ children }) => {
   const addService = async (serviceData) => {
     try {
       const response = await apiService.services.create(serviceData);
-      const normalized = normalizeService(response.data);
-      setServices(prev => [...prev, normalized]);
-      // Refetch technicians to update workload counts
-      const techRes = await apiService.technicians.getAll();
-      setTechnicians(techRes.data.results || techRes.data);
+      // Refresh all data to catch auto-generated invoices and paymants
+      fetchData();
       return { success: true, data: response.data };
     } catch (err) {
       return handleApiError(err);
@@ -268,8 +281,20 @@ export const GarageProvider = ({ children }) => {
   const updateServiceStatus = async (id, status) => {
     try {
       await apiService.services.updateStatus(id, status);
-      setServices(prev => prev.map(s => s.id === id ? { ...s, status } : s));
+      // Refresh all data to catch auto-generated invoice if marked as Completed
+      fetchData();
       return { success: true };
+    } catch (err) {
+      return handleApiError(err);
+    }
+  };
+
+  const updateService = async (id, serviceData) => {
+    try {
+      const response = await apiService.services.update(id, serviceData);
+      // Refresh all data to catch synced invoices and payments
+      fetchData();
+      return { success: true, data: response.data };
     } catch (err) {
       return handleApiError(err);
     }
@@ -283,6 +308,8 @@ export const GarageProvider = ({ children }) => {
       const normalized = normalizeInvoice(response.data);
       console.log('Invoice created - normalized:', normalized);
       setInvoices(prev => [...prev, normalized]);
+      // Refresh all data to ensure we get the auto-generated advance payment record
+      fetchData();
       return normalized;
     } catch (err) {
       console.error('Invoice creation error:', handleApiError(err));
@@ -318,7 +345,7 @@ export const GarageProvider = ({ children }) => {
   // Payment Operations
   const recordPayment = async (invoiceId, paymentData) => {
     try {
-      const response = await apiService.payments.create({ invoice_id: invoiceId, ...paymentData });
+      const response = await apiService.payments.create({ invoiceId: invoiceId, ...paymentData });
       const normalized = normalizePayment(response.data);
       setPayments(prev => [...prev, normalized]);
       
@@ -333,6 +360,37 @@ export const GarageProvider = ({ children }) => {
 
   const getInvoicePayments = (invoiceId) => {
     return payments.filter(p => (p.invoice || p.invoice_id) === invoiceId);
+  };
+
+  // Technician Operations
+  const addTechnician = async (techData) => {
+    try {
+      const response = await apiService.technicians.create(techData);
+      setTechnicians(prev => [...prev, response.data]);
+      return { success: true, data: response.data };
+    } catch (err) {
+      return handleApiError(err);
+    }
+  };
+
+  const updateTechnician = async (id, updates) => {
+    try {
+      const response = await apiService.technicians.update(id, updates);
+      setTechnicians(prev => prev.map(t => t.id === id ? response.data : t));
+      return { success: true, data: response.data };
+    } catch (err) {
+      return handleApiError(err);
+    }
+  };
+
+  const deleteTechnician = async (id) => {
+    try {
+      await apiService.technicians.delete(id);
+      setTechnicians(prev => prev.filter(t => t.id !== id));
+      return { success: true };
+    } catch (err) {
+      return handleApiError(err);
+    }
   };
 
   // Financial Reporting
@@ -372,9 +430,20 @@ export const GarageProvider = ({ children }) => {
     });
   };
 
+  const getCustomerOverdue = (customerId) => {
+    const today = new Date();
+    const customerInvoices = invoices.filter(inv => 
+      inv.customerId === customerId && 
+      inv.status !== 'paid' && 
+      inv.status !== 'canceled' && 
+      new Date(inv.dueDate) < today
+    );
+    return customerInvoices.reduce((sum, inv) => sum + parseFloat(inv.balanceDue || 0), 0);
+  };
+
   const getCustomerBalance = (customerId) => {
     const customerInvoices = invoices.filter(inv => inv.customerId === customerId);
-    return customerInvoices.reduce((sum, inv) => sum + parseFloat(inv.balancedue || 0), 0);
+    return customerInvoices.reduce((sum, inv) => sum + parseFloat(inv.balanceDue || 0), 0);
   };
 
   const value = {
@@ -402,6 +471,7 @@ export const GarageProvider = ({ children }) => {
     updateVehicle,
     getCustomerVehicles,
     addService,
+    updateService,
     updateServiceStatus,
     createInvoice,
     updateInvoice,
@@ -411,7 +481,12 @@ export const GarageProvider = ({ children }) => {
     getOutstandingInvoices,
     getOverdueInvoices,
     getCustomerBalance,
+    getCustomerOverdue,
     getRevenueReport,
+    addTechnician,
+    updateTechnician,
+    deleteTechnician,
+    deactivateStaffMember,
     refreshData: fetchData,
     // Notification functions
     notification,

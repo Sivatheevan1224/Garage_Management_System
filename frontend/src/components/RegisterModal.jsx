@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { X, Lock, Mail, User } from "lucide-react"
+import { X, Lock, Mail, User, AlertCircle, CheckCircle2 } from "lucide-react"
 import { useGarage } from "../context/GarageContext"
 
 export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
@@ -7,6 +7,7 @@ export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState({})
 
   const [formData, setFormData] = useState({
     name: "",
@@ -15,45 +16,121 @@ export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
     confirmPassword: "",
   })
 
+  const validateForm = () => {
+    const errors = {}
+    
+    // Name validation
+    if (!formData.name.trim()) {
+      errors.name = "Name is required"
+    } else if (formData.name.trim().length < 2) {
+      errors.name = "Name must be at least 2 characters"
+    }
+    
+    // Email validation
+    if (!formData.email) {
+      errors.email = "Email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = "Please enter a valid email address"
+    }
+    
+    // Password validation
+    if (!formData.password) {
+      errors.password = "Password is required"
+    } else if (formData.password.length < 8) {
+      errors.password = "Password must be at least 8 characters"
+    } else if (!/(?=.*[a-z])/.test(formData.password)) {
+      errors.password = "Password must contain at least one lowercase letter"
+    } else if (!/(?=.*[A-Z])/.test(formData.password)) {
+      errors.password = "Password must contain at least one uppercase letter"
+    } else if (!/(?=.*\d)/.test(formData.password)) {
+      errors.password = "Password must contain at least one number"
+    }
+    
+    // Confirm password validation
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = "Please confirm your password"
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = "Passwords do not match"
+    }
+    
+    setFieldErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match")
+    setError("")
+    setFieldErrors({})
+    
+    if (!validateForm()) {
       return
     }
 
     setLoading(true)
-    setError("")
     
     try {
       const result = await registerStaff({
         name: formData.name,
         email: formData.email,
         password: formData.password,
-        role: 'staff' // Default role for registration
+        role: 'staff'
       })
 
       if (result.success) {
         setSuccess(true)
+        setFormData({ name: "", email: "", password: "", confirmPassword: "" })
         setTimeout(() => {
           onOpenChange(false)
           onSwitchToLogin()
+          setSuccess(false)
         }, 3000)
       } else {
-        setError(result.message || "Registration failed")
+        // Handle backend validation errors
+        if (result.errors) {
+          const backendErrors = {}
+          if (result.errors.email) {
+            backendErrors.email = Array.isArray(result.errors.email) 
+              ? result.errors.email[0] 
+              : result.errors.email
+          }
+          if (result.errors.password) {
+            backendErrors.password = Array.isArray(result.errors.password) 
+              ? result.errors.password[0] 
+              : result.errors.password
+          }
+          if (result.errors.name) {
+            backendErrors.name = Array.isArray(result.errors.name) 
+              ? result.errors.name[0] 
+              : result.errors.name
+          }
+          setFieldErrors(backendErrors)
+        }
+        setError(result.message || "Registration failed. Please try again.")
       }
     } catch (err) {
-      setError("An unexpected error occurred")
+      setError("Unable to connect to server. Please try again later.")
     } finally {
       setLoading(false)
     }
   }
 
   const handleChange = (e) => {
+    const { name, value } = e.target
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     })
+    // Clear field error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors({
+        ...fieldErrors,
+        [name]: ""
+      })
+    }
+    // Clear general error when user starts typing
+    if (error) {
+      setError("")
+    }
   }
 
   if (!open) return null
@@ -73,15 +150,20 @@ export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
             <h2 className="text-2xl font-bold text-foreground">Register for ProGarage</h2>
         </div>
 
-        {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">{error}</div>}
+        {error && (
+          <div className="mb-6 p-3 bg-red-500/10 border border-red-500/50 text-red-500 rounded-lg text-sm flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
         {success && (
-          <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-sm">
-            Account created successfully! Admin approval is required before you can login. Redirecting...
+          <div className="mb-6 p-3 bg-green-500/10 border border-green-500/50 text-green-500 rounded-lg text-sm flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+            <span>Registration successful! Please wait for admin approval before logging in. Redirecting...</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* ... inputs stay the same ... */}
           <div className="space-y-2">
             <label htmlFor="register-name" className="text-sm font-medium text-foreground flex items-center gap-2">
               <User className="h-4 w-4" />
@@ -91,12 +173,21 @@ export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
               id="register-name"
               name="name"
               type="text"
-              placeholder="Your name"
+              placeholder="Your full name"
               value={formData.name}
               onChange={handleChange}
-              required
-              className="w-full h-12 px-4 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-foreground"
+              className={`w-full h-12 px-4 bg-background border rounded-lg focus:outline-none focus:ring-2 text-foreground transition-colors ${
+                fieldErrors.name 
+                  ? 'border-red-500 focus:ring-red-500' 
+                  : 'border-border focus:ring-accent'
+              }`}
             />
+            {fieldErrors.name && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {fieldErrors.name}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -111,9 +202,18 @@ export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
               placeholder="your@email.com"
               value={formData.email}
               onChange={handleChange}
-              required
-              className="w-full h-12 px-4 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-foreground"
+              className={`w-full h-12 px-4 bg-background border rounded-lg focus:outline-none focus:ring-2 text-foreground transition-colors ${
+                fieldErrors.email 
+                  ? 'border-red-500 focus:ring-red-500' 
+                  : 'border-border focus:ring-accent'
+              }`}
             />
+            {fieldErrors.email && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {fieldErrors.email}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -128,9 +228,23 @@ export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
               placeholder="••••••••"
               value={formData.password}
               onChange={handleChange}
-              required
-              className="w-full h-12 px-4 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-foreground"
+              className={`w-full h-12 px-4 bg-background border rounded-lg focus:outline-none focus:ring-2 text-foreground transition-colors ${
+                fieldErrors.password 
+                  ? 'border-red-500 focus:ring-red-500' 
+                  : 'border-border focus:ring-accent'
+              }`}
             />
+            {fieldErrors.password && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {fieldErrors.password}
+              </p>
+            )}
+            {!fieldErrors.password && formData.password === "" && (
+              <p className="text-muted-foreground text-xs mt-1">
+                Must be 8+ characters with uppercase, lowercase, and number
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -148,9 +262,18 @@ export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
               placeholder="••••••••"
               value={formData.confirmPassword}
               onChange={handleChange}
-              required
-              className="w-full h-12 px-4 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-foreground"
+              className={`w-full h-12 px-4 bg-background border rounded-lg focus:outline-none focus:ring-2 text-foreground transition-colors ${
+                fieldErrors.confirmPassword 
+                  ? 'border-red-500 focus:ring-red-500' 
+                  : 'border-border focus:ring-accent'
+              }`}
             />
+            {fieldErrors.confirmPassword && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {fieldErrors.confirmPassword}
+              </p>
+            )}
           </div>
 
           <button

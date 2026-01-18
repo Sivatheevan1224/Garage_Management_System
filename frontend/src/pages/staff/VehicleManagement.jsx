@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useGarage } from '../../context/GarageContext';
-import { Plus, Search, Edit, Car, X, User, Clock } from 'lucide-react';
+import { Plus, Search, Edit, Car, X, User, Clock, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const VehicleManagement = () => {
@@ -142,7 +142,12 @@ const VehicleManagement = () => {
                                 <X size={24} />
                             </button>
                         </div>
-                        {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded text-sm">{error}</div>}
+                        {error && (
+                            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 text-red-500 rounded-lg text-sm flex items-center gap-2">
+                                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                                <span>{error}</span>
+                            </div>
+                        )}
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-sm text-muted-foreground mb-1">Customer (Owner)</label>

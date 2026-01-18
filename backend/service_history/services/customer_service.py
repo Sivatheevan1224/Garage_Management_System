@@ -1,5 +1,4 @@
 from ..models import Customer
-import uuid
 
 def get_all_customers():
     return Customer.objects.all()
@@ -11,8 +10,9 @@ def get_customer_by_id(customer_id):
         return None
 
 def create_customer(data):
-    if 'id' not in data or not data['id']:
-        data['id'] = str(uuid.uuid4())
+    # Remove manual ID - use auto-increment
+    if 'id' in data:
+        del data['id']
     customer = Customer.objects.create(**data)
     return customer
 

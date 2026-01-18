@@ -1,7 +1,5 @@
 import { useState } from "react"
-import { X, Lock, Mail } from "lucide-react"
-
-
+import { X, Lock, Mail, AlertCircle } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useGarage } from "../context/GarageContext"
 
@@ -10,37 +8,76 @@ export function LoginModal({ open, onOpenChange, onSwitchToRegister }) {
   const navigate = useNavigate()
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState({})
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   })
 
+  const validateForm = () => {
+    const errors = {}
+    
+    if (!formData.email) {
+      errors.email = "Email is required"
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = "Please enter a valid email address"
+    }
+    
+    if (!formData.password) {
+      errors.password = "Password is required"
+    } else if (formData.password.length < 6) {
+      errors.password = "Password must be at least 6 characters"
+    }
+    
+    setFieldErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
     setError("")
+    setFieldErrors({})
+    
+    if (!validateForm()) {
+      return
+    }
+    
+    setLoading(true)
     
     try {
         const result = await login(formData.email, formData.password)
         if (result.success) {
             onOpenChange(false)
+            setFormData({ email: "", password: "" })
             if (result.user.role === 'admin') navigate('/admin')
             else navigate('/staff')
         } else {
-            setError(result.message || "Invalid credentials")
+            setError(result.message || "Invalid email or password")
         }
     } catch (err) {
-        setError("An error occurred during login. Please try again.")
+        setError("Unable to connect to server. Please try again later.")
     } finally {
         setLoading(false)
     }
   }
 
   const handleChange = (e) => {
+    const { name, value } = e.target
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     })
+    // Clear field error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors({
+        ...fieldErrors,
+        [name]: ""
+      })
+    }
+    // Clear general error when user starts typing
+    if (error) {
+      setError("")
+    }
   }
 
   if (!open) return null
@@ -62,9 +99,10 @@ export function LoginModal({ open, onOpenChange, onSwitchToRegister }) {
         </div>
 
         {error && (
-            <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-lg mb-6 text-sm text-center">
-            {error}
-            </div>
+          <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-lg mb-6 text-sm flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -80,9 +118,18 @@ export function LoginModal({ open, onOpenChange, onSwitchToRegister }) {
               placeholder="your@email.com"
               value={formData.email}
               onChange={handleChange}
-              required
-              className="w-full h-12 px-4 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-foreground"
+              className={`w-full h-12 px-4 bg-background border rounded-lg focus:outline-none focus:ring-2 text-foreground transition-colors ${
+                fieldErrors.email 
+                  ? 'border-red-500 focus:ring-red-500' 
+                  : 'border-border focus:ring-accent'
+              }`}
             />
+            {fieldErrors.email && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {fieldErrors.email}
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -97,9 +144,18 @@ export function LoginModal({ open, onOpenChange, onSwitchToRegister }) {
               placeholder="••••••••"
               value={formData.password}
               onChange={handleChange}
-              required
-              className="w-full h-12 px-4 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-foreground"
+              className={`w-full h-12 px-4 bg-background border rounded-lg focus:outline-none focus:ring-2 text-foreground transition-colors ${
+                fieldErrors.password 
+                  ? 'border-red-500 focus:ring-red-500' 
+                  : 'border-border focus:ring-accent'
+              }`}
             />
+            {fieldErrors.password && (
+              <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                {fieldErrors.password}
+              </p>
+            )}
           </div>
 
           <button

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Menu, X, Wrench } from "lucide-react"
 import { LoginModal } from "./LoginModal"
 import { RegisterModal } from "./RegisterModal"
@@ -7,13 +7,39 @@ export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoginOpen, setIsLoginOpen] = useState(false)
   const [isRegisterOpen, setIsRegisterOpen] = useState(false)
+  const [activeSection, setActiveSection] = useState("home")
 
   const navItems = [
-    { name: "Home", href: "#home" },
-    { name: "Features", href: "#features" },
-    { name: "About", href: "#about" },
-    { name: "Contact", href: "#contact" },
+    { name: "Home", href: "#home", id: "home" },
+    { name: "Features", href: "#features", id: "features" },
+    { name: "About", href: "#about", id: "about" },
+    { name: "Contact", href: "#contact", id: "contact" },
   ]
+
+  useEffect(() => {
+    const observerOptions = {
+      root: null,
+      rootMargin: '-50% 0px -50% 0px', // Trigger when section is in middle of viewport
+      threshold: 0
+    };
+
+    const observerCallback = (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    navItems.forEach((item) => {
+      const element = document.getElementById(item.id);
+      if (element) observer.observe(element);
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <>
@@ -30,10 +56,16 @@ export function Navbar() {
                 <a
                   key={item.name}
                   href={item.href}
-                  className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors relative group"
+                  className={`text-sm font-semibold transition-all relative group ${
+                    activeSection === item.id 
+                    ? 'text-accent' 
+                    : 'text-gray-600 hover:text-gray-900'
+                  }`}
                 >
                   {item.name}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-accent group-hover:w-full transition-all duration-300"></span>
+                  <span className={`absolute -bottom-1 left-0 h-0.5 bg-accent transition-all duration-300 ${
+                    activeSection === item.id ? 'w-full' : 'w-0 group-hover:w-full'
+                  }`}></span>
                 </a>
               ))}
             </div>
@@ -69,7 +101,11 @@ export function Navbar() {
                   <a
                     key={item.name}
                     href={item.href}
-                    className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors px-2"
+                    className={`text-sm font-bold transition-all px-3 py-2 rounded-lg ${
+                      activeSection === item.id 
+                      ? 'bg-accent/10 text-accent' 
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    }`}
                     onClick={() => setIsMenuOpen(false)}
                   >
                     {item.name}

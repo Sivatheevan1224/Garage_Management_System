@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
 import { useGarage } from '../../context/GarageContext';
-import { Plus, Search, Edit, Trash2, X } from 'lucide-react';
-import NotificationModal from '../../components/NotificationModal';
+import { Plus, Search, Edit, Trash2, X, AlertCircle } from 'lucide-react';
+
 
 const CustomerManagement = () => {
     const { customers, addCustomer, updateCustomer, deleteCustomer, notification, closeNotification, showNotification, showConfirmation } = useGarage();
@@ -146,7 +146,12 @@ const CustomerManagement = () => {
                                 <X size={24} />
                             </button>
                         </div>
-                        {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded text-sm">{error}</div>}
+                        {error && (
+                            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 text-red-500 rounded-lg text-sm flex items-center gap-2">
+                                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                                <span>{error}</span>
+                            </div>
+                        )}
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
@@ -187,20 +192,7 @@ const CustomerManagement = () => {
                 </div>
             )}
 
-            {/* Notification Modal */}
-            {notification && (
-                <NotificationModal
-                    isOpen={notification.isOpen}
-                    type={notification.type}
-                    title={notification.title}
-                    message={notification.message}
-                    onClose={closeNotification}
-                    onConfirm={notification.onConfirm}
-                    confirmText={notification.confirmText}
-                    cancelText={notification.cancelText}
-                    isConfirmation={notification.type === 'confirmation'}
-                />
-            )}
+
         </div>
     );
 };
