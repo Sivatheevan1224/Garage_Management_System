@@ -1,8 +1,9 @@
 from django.db import models
+from django.utils import timezone
 import json
 
 class Customer(models.Model):
-    id = models.CharField(max_length=50, primary_key=True)
+    # Standard auto-incrementing ID
     name = models.CharField(max_length=100)
     nic = models.CharField(max_length=20, unique=True, null=True, blank=True)
     email = models.EmailField(unique=True)
@@ -18,7 +19,7 @@ class Customer(models.Model):
 
 
 class Vehicle(models.Model):
-    id = models.CharField(max_length=50, primary_key=True)
+    # Standard auto-incrementing ID
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='vehicles')
     brand = models.CharField(max_length=50)
     model = models.CharField(max_length=50)
@@ -38,9 +39,11 @@ class Vehicle(models.Model):
 
 
 class Technician(models.Model):
-    id = models.CharField(max_length=50, primary_key=True)
+    # Standard auto-incrementing ID
     name = models.CharField(max_length=100)
     specialization = models.CharField(max_length=100, null=True, blank=True)
+    phone = models.CharField(max_length=20, null=True, blank=True)
+    is_active = models.BooleanField(default=True)
     workload = models.IntegerField(default=0)
 
     class Meta:
@@ -57,11 +60,20 @@ class Service(models.Model):
         ('Completed', 'Completed'),
     ]
 
-    id = models.CharField(max_length=50, primary_key=True)
+    # Standard auto-incrementing ID
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, related_name='services')
     type = models.CharField(max_length=100)
     description = models.TextField(null=True, blank=True)
     cost = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    tax_included = models.BooleanField(default=False)
+    advance_payment = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    advance_payment_method = models.CharField(max_length=20, null=True, blank=True, choices=[
+        ('cash', 'Cash'), 
+        ('card', 'Card'),
+        ('check', 'Check'),
+        ('bank_transfer', 'Bank Transfer')
+    ])
+    remaining_balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     date = models.DateTimeField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
     technician = models.ForeignKey(Technician, on_delete=models.SET_NULL, null=True, blank=True, related_name='services')
@@ -72,7 +84,7 @@ class Service(models.Model):
         db_table = 'services'
 
     def __str__(self):
-        return f"{self.vehicle.number} - {self.type}"
+        return f"Job #{self.id} - {self.vehicle.number}"
 
 
 class Invoice(models.Model):
@@ -84,7 +96,7 @@ class Invoice(models.Model):
         ('canceled', 'Canceled'),
     ]
 
-    id = models.CharField(max_length=50, primary_key=True)
+    # Standard auto-incrementing ID
     invoice_number = models.CharField(max_length=50, unique=True)
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='invoices')
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='invoices')
@@ -118,11 +130,11 @@ class Payment(models.Model):
         ('bank_transfer', 'Bank Transfer'),
     ]
 
-    id = models.CharField(max_length=50, primary_key=True)
+    # Standard auto-incrementing ID
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='payments')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     method = models.CharField(max_length=20, choices=METHOD_CHOICES)
-    date = models.DateTimeField(auto_now_add=True)
+    date = models.DateTimeField(default=timezone.now)
     reference = models.CharField(max_length=100, null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
 
@@ -130,16 +142,15 @@ class Payment(models.Model):
         db_table = 'payments'
 
     def __str__(self):
-        return f"{self.invoice.invoice_number} - ${self.amount}"
-
-
-
+        return f"Payment #{self.id} - {self.invoice.invoice_number}"
 
 
 class BillingSetting(models.Model):
     tax_rate = models.DecimalField(max_digits=5, decimal_places=4, default=0.1000)
     invoice_prefix = models.CharField(max_length=10, default='INV')
     next_invoice_number = models.IntegerField(default=1001)
+    service_prefix = models.CharField(max_length=10, default='SRV')
+    next_service_number = models.IntegerField(default=1001)
     payment_terms = models.CharField(max_length=50, default='Net 30')
     company_name = models.CharField(max_length=100, default='ProGarage')
     company_address = models.CharField(max_length=255, default='123 Auto Lane')

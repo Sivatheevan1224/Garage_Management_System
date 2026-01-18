@@ -1,5 +1,4 @@
 from ..models import Vehicle
-import uuid
 
 def get_all_vehicles():
     return Vehicle.objects.all()
@@ -11,8 +10,9 @@ def get_vehicle_by_id(vehicle_id):
         return None
 
 def create_vehicle(data):
-    if 'id' not in data or not data['id']:
-        data['id'] = str(uuid.uuid4())
+    # Remove manual ID - use auto-increment
+    if 'id' in data:
+        del data['id']
     vehicle = Vehicle.objects.create(**data)
     return vehicle
 
@@ -23,7 +23,6 @@ def update_vehicle(vehicle_id, data):
     vehicle = get_vehicle_by_id(vehicle_id)
     if vehicle:
         for attr, value in data.items():
-            # If the attribute is 'customer', handle it separately
             if attr == 'customer' and value:
                 from ..models import Customer
                 if isinstance(value, Customer):
@@ -46,5 +45,3 @@ def delete_vehicle(vehicle_id):
         vehicle.delete()
         return True
     return False
-
-

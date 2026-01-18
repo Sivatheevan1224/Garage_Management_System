@@ -250,19 +250,32 @@ def payment_list(request):
         serializer = PaymentSerializer(payments, many=True)
         return success_response(serializer.data)
     elif request.method == 'POST':
-        serializer = PaymentSerializer(data=request.data)
+        data = request.data.copy()
+        if 'id' in data and not data['id']:
+            del data['id']
+            
+        serializer = PaymentSerializer(data=data)
         if serializer.is_valid():
             payment = serializer.save()
             
-            # Simple logic to update invoice (could be in a service)
+            # Recalculate invoice paid amount and balance due
+            from django.db.models import Sum
             invoice = payment.invoice
-            invoice.paid_amount += payment.amount
+            total_paid = Payment.objects.filter(invoice=invoice).aggregate(Sum('amount'))['amount__sum'] or 0
+            
+            invoice.paid_amount = total_paid
             invoice.balance_due = invoice.total - invoice.paid_amount
             if invoice.balance_due <= 0:
                 invoice.status = 'paid'
             invoice.save()
             
-            return success_response(serializer.data, "Payment processed", status_code=201)
+            # Sync Service remaining balance with Invoice balance
+            if invoice.service:
+                service = invoice.service
+                service.remaining_balance = invoice.balance_due
+                service.save()
+            
+            return success_response(PaymentSerializer(payment).data, "Payment processed", status_code=201)
         return error_response(serializer.errors)
 
 @api_view(['GET', 'DELETE'])

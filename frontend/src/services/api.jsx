@@ -30,6 +30,20 @@ api.interceptors.response.use(
         return response;
     },
     (error) => {
+        // Extract more detailed error information
+        if (error.response && error.response.data) {
+            const errorData = error.response.data;
+            // If backend returns standardized error format
+            if (errorData.error) {
+                error.message = errorData.error;
+            } else if (errorData.message) {
+                error.message = errorData.message;
+            }
+            // Preserve validation errors
+            if (errorData.errors) {
+                error.validationErrors = errorData.errors;
+            }
+        }
         return Promise.reject(error);
     }
 );
@@ -131,10 +145,34 @@ export const handleApiError = (error) => {
     if (error.response) {
         // Server responded with error status
         console.error('API Error:', error.response.data);
+        
+        const errorData = error.response.data;
+        let message = 'An error occurred';
+        let errors = null;
+        
+        // Extract error message (try different formats)
+        // Django error format: { status: 'error', message: 'Error', errors: '...' }
+        if (typeof errorData.errors === 'string') {
+            message = errorData.errors;  // This is where the actual message is
+        } else if (errorData.error) {
+            message = errorData.error;
+        } else if (errorData.message && errorData.message !== 'Error') {
+            message = errorData.message;
+        } else if (typeof errorData === 'string') {
+            message = errorData;
+        }
+        
+        // Extract validation errors (when errors is an object)
+        if (typeof errorData.errors === 'object' && errorData.errors !== null) {
+            errors = errorData.errors;
+        } else if (error.validationErrors) {
+            errors = error.validationErrors;
+        }
+        
         return {
             success: false,
-            message: error.response.data.message || 'An error occurred',
-            errors: error.response.data,
+            message: message,
+            errors: errors,
         };
     } else if (error.request) {
         // Request made but no response
@@ -148,7 +186,7 @@ export const handleApiError = (error) => {
         console.error('Error:', error.message);
         return {
             success: false,
-            message: error.message,
+            message: error.message || 'An unexpected error occurred',
         };
     }
 };
