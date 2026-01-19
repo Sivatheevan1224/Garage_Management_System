@@ -411,10 +411,29 @@ export const GarageProvider = ({ children }) => {
       return acc;
     }, {});
 
+    // Calculate average payment
+    const averagePayment = relevantPayments.length > 0 ? totalRevenue / relevantPayments.length : 0;
+
+    // Calculate revenue by service type
+    const serviceRevenue = relevantPayments.reduce((acc, payment) => {
+        const invoiceId = payment.invoiceId || payment.invoice_id;
+        const invoice = invoices.find(inv => inv.id === invoiceId);
+        if (invoice) {
+            const service = services.find(s => s.id === invoice.serviceId);
+            const type = service?.type || 'Standard Service';
+            acc[type] = (acc[type] || 0) + parseFloat(payment.amount);
+        } else {
+            acc['General'] = (acc['General'] || 0) + parseFloat(payment.amount);
+        }
+        return acc;
+    }, {});
+
     return {
       totalRevenue,
       paymentMethods,
-      paymentCount: relevantPayments.length
+      paymentCount: relevantPayments.length,
+      averagePayment,
+      serviceRevenue
     };
   };
 
