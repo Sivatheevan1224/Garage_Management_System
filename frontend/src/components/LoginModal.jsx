@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { X, Lock, Mail, AlertCircle } from "lucide-react"
+import { X, Lock, Mail, AlertCircle, Eye, EyeOff } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useGarage } from "../context/GarageContext"
 
@@ -32,6 +32,8 @@ export function LoginModal({ open, onOpenChange, onSwitchToRegister }) {
     setFieldErrors(errors)
     return Object.keys(errors).length === 0
   }
+
+  const [showPassword, setShowPassword] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -137,19 +139,29 @@ export function LoginModal({ open, onOpenChange, onSwitchToRegister }) {
               <Lock className="h-4 w-4" />
               Password
             </label>
-            <input
-              id="login-password"
-              name="password"
-              type="password"
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={handleChange}
-              className={`w-full h-12 px-4 bg-background border rounded-lg focus:outline-none focus:ring-2 text-foreground transition-colors ${
-                fieldErrors.password 
-                  ? 'border-red-500 focus:ring-red-500' 
-                  : 'border-border focus:ring-accent'
-              }`}
-            />
+            <div className="relative">
+              <input
+                id="login-password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={handleChange}
+                className={`w-full h-12 pl-4 pr-12 bg-background border rounded-lg focus:outline-none focus:ring-2 text-foreground transition-colors ${
+                  fieldErrors.password 
+                    ? 'border-red-500 focus:ring-red-500' 
+                    : 'border-border focus:ring-accent'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                tabIndex="-1"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
             {fieldErrors.password && (
               <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />

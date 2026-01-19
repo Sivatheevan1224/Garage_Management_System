@@ -6,6 +6,10 @@ import {
   LayoutDashboard, Users, Wrench, LogOut, HardHat, 
   TrendingUp, Clock, History, BarChart3, ShieldCheck, DollarSign, Car, Wallet
 } from 'lucide-react';
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, BarChart, Bar, Legend
+} from 'recharts';
 import StaffManagement from './StaffManagement';
 import TechnicianManagement from './TechnicianManagement';
 import Billing from '../staff/Billing';
@@ -116,9 +120,43 @@ const AdminDashboard = () => {
 };
 
 const AdminHome = () => {
-    const { customers, vehicles, services, invoices, staffMembers, technicians } = useGarage();
+    const { customers, vehicles, services, invoices, staffMembers, technicians, payments } = useGarage();
     const totalRevenue = invoices.reduce((acc, inv) => acc + (parseFloat(inv.total) || 0), 0);
     const todayServices = services.filter(s => new Date(s.date).toDateString() === new Date().toDateString()).length;
+
+    // Process Revenue Data for Chart
+    const revenueData = React.useMemo(() => {
+        const last7Days = [...Array(7)].map((_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - (6 - i));
+            return d.toISOString().split('T')[0];
+        });
+
+        return last7Days.map(date => {
+            const dailyRevenue = payments
+                .filter(p => p.date.startsWith(date))
+                .reduce((sum, p) => sum + p.amount, 0);
+            
+            return {
+                name: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+                revenue: dailyRevenue
+            };
+        });
+    }, [payments]);
+
+    // Process Service Distribution Data
+    const serviceDistribution = React.useMemo(() => {
+        const types = services.reduce((acc, s) => {
+            acc[s.type] = (acc[s.type] || 0) + 1;
+            return acc;
+        }, {});
+        
+        return Object.entries(types).map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 5);
+    }, [services]);
+
+    const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#6366f1', '#f43f5e'];
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -186,6 +224,78 @@ const AdminHome = () => {
                     bg="bg-purple-50"
                     barColor="bg-purple-500" 
                 />
+            </div>
+
+            {/* Visual Analytics */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+                {/* Revenue Chart */}
+                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h3 className="text-xl font-bold text-slate-800">Revenue Analytics</h3>
+                            <p className="text-sm text-slate-500">7-day performance overview</p>
+                        </div>
+                        <div className="bg-blue-50 text-blue-600 p-2 rounded-xl">
+                            <TrendingUp size={20} />
+                        </div>
+                    </div>
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={revenueData}>
+                                <defs>
+                                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} dy={10} />
+                                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} tickFormatter={(value) => `LKR ${value}`} />
+                                <Tooltip 
+                                    contentStyle={{backgroundColor: '#fff', borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
+                                    itemStyle={{color: '#3b82f6', fontWeight: 'bold'}}
+                                />
+                                <Area type="monotone" dataKey="revenue" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                {/* Service Portfolio */}
+                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h3 className="text-xl font-bold text-slate-800">Service Portfolio</h3>
+                            <p className="text-sm text-slate-500">Distribution by service category</p>
+                        </div>
+                        <div className="bg-emerald-50 text-emerald-600 p-2 rounded-xl">
+                            <Wrench size={20} />
+                        </div>
+                    </div>
+                    <div className="h-[300px] w-full flex items-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={serviceDistribution}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={100}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                >
+                                    {serviceDistribution.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} cornerRadius={10} />
+                                    ))}
+                                </Pie>
+                                <Tooltip 
+                                     contentStyle={{backgroundColor: '#fff', borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
+                                />
+                                <Legend verticalAlign="bottom" height={36}/>
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
             </div>
 
             {/* Recent Activity Section */}

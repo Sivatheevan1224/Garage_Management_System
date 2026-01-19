@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { X, Lock, Mail, User, AlertCircle, CheckCircle2 } from "lucide-react"
+import { X, Lock, Mail, User, AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react"
 import { useGarage } from "../context/GarageContext"
 
 export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
@@ -8,6 +8,8 @@ export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
   const [fieldErrors, setFieldErrors] = useState({})
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const [formData, setFormData] = useState({
     name: "",
@@ -221,19 +223,29 @@ export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
               <Lock className="h-4 w-4" />
               Password
             </label>
-            <input
-              id="register-password"
-              name="password"
-              type="password"
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={handleChange}
-              className={`w-full h-12 px-4 bg-background border rounded-lg focus:outline-none focus:ring-2 text-foreground transition-colors ${
-                fieldErrors.password 
-                  ? 'border-red-500 focus:ring-red-500' 
-                  : 'border-border focus:ring-accent'
-              }`}
-            />
+            <div className="relative">
+              <input
+                id="register-password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={handleChange}
+                className={`w-full h-12 pl-4 pr-12 bg-background border rounded-lg focus:outline-none focus:ring-2 text-foreground transition-colors ${
+                  fieldErrors.password 
+                    ? 'border-red-500 focus:ring-red-500' 
+                    : 'border-border focus:ring-accent'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                tabIndex="-1"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
             {fieldErrors.password && (
               <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
@@ -255,19 +267,29 @@ export function RegisterModal({ open, onOpenChange, onSwitchToLogin }) {
               <Lock className="h-4 w-4" />
               Confirm Password
             </label>
-            <input
-              id="register-confirm-password"
-              name="confirmPassword"
-              type="password"
-              placeholder="••••••••"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              className={`w-full h-12 px-4 bg-background border rounded-lg focus:outline-none focus:ring-2 text-foreground transition-colors ${
-                fieldErrors.confirmPassword 
-                  ? 'border-red-500 focus:ring-red-500' 
-                  : 'border-border focus:ring-accent'
-              }`}
-            />
+            <div className="relative">
+              <input
+                id="register-confirm-password"
+                name="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className={`w-full h-12 pl-4 pr-12 bg-background border rounded-lg focus:outline-none focus:ring-2 text-foreground transition-colors ${
+                  fieldErrors.confirmPassword 
+                    ? 'border-red-500 focus:ring-red-500' 
+                    : 'border-border focus:ring-accent'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                tabIndex="-1"
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
             {fieldErrors.confirmPassword && (
               <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
