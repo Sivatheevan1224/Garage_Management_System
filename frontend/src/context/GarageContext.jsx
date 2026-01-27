@@ -199,7 +199,7 @@ export const GarageProvider = ({ children }) => {
       }
   };
 
-  const updateUserRole = async (id, newRole) => {
+   const updateUserRole = async (id, newRole) => {
       try {
           await apiService.users.update(id, { role: newRole });
            // Update local state
@@ -208,6 +208,33 @@ export const GarageProvider = ({ children }) => {
       } catch(err) {
           return handleApiError(err);
       }
+  };
+
+  const requestPasswordReset = async (email) => {
+    try {
+      const response = await apiService.auth.requestPasswordReset(email);
+      return { success: true, message: response.message };
+    } catch (err) {
+      return handleApiError(err);
+    }
+  };
+
+  const verifyOtp = async (email, otp) => {
+    try {
+      const response = await apiService.auth.verifyOtp(email, otp);
+      return { success: true, message: response.message };
+    } catch (err) {
+      return handleApiError(err);
+    }
+  };
+
+  const confirmPasswordReset = async (email, otp, password) => {
+    try {
+      const response = await apiService.auth.confirmPasswordReset(email, otp, password);
+      return { success: true, message: response.message };
+    } catch (err) {
+      return handleApiError(err);
+    }
   };
 
   // Customer Operations
@@ -483,6 +510,9 @@ export const GarageProvider = ({ children }) => {
     removeStaffMember,
     approveStaffMember,
     updateUserRole,
+    requestPasswordReset,
+    verifyOtp,
+    confirmPasswordReset,
     addCustomer,
     updateCustomer,
     deleteCustomer,

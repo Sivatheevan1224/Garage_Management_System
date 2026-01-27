@@ -120,6 +120,9 @@ const apiService = {
         approveUser: (userId) => api.post(`/accounts/approve/${userId}/`),
         deactivateUser: (userId) => api.post(`/accounts/deactivate/${userId}/`),
         activateUser: (userId) => api.post(`/accounts/activate/${userId}/`),
+        requestPasswordReset: (email) => api.post('/accounts/password-reset/', { email }),
+        verifyOtp: (email, otp) => api.post('/accounts/password-reset-verify-otp/', { email, otp }),
+        confirmPasswordReset: (email, otp, password) => api.post('/accounts/password-reset-confirm/', { email, otp, password }),
     },
 
 

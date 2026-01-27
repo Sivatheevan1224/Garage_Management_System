@@ -13,6 +13,7 @@ import CustomersTab from '../../components/billing/CustomersTab';
 import InvoiceDetailView from '../../components/billing/InvoiceDetailView';
 import PaymentModal from '../../components/billing/PaymentModal';
 import ReportsModal from '../../components/billing/ReportsModal';
+import CustomerStatementModal from '../../components/billing/CustomerStatementModal';
 
 const Billing = () => {
     const { 
@@ -26,8 +27,10 @@ const Billing = () => {
     const location = useLocation();
     const [activeTab, setActiveTab] = useState('invoices');
     const [selectedInvoice, setSelectedInvoice] = useState(null);
+    const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [showReportsModal, setShowReportsModal] = useState(false);
+    const [showStatementModal, setShowStatementModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [currency, setCurrency] = useState(() => localStorage.getItem('billingCurrency') || 'LKR');
@@ -194,13 +197,32 @@ const Billing = () => {
                     />
                 )}
                 {activeTab === 'payments' && <PaymentsTab payments={payments} invoices={invoices} customers={customers} formatCurrency={formatCurrency} />}
-                {activeTab === 'customers' && <CustomersTab customers={customers} getCustomerBalance={getCustomerBalance} getCustomerOverdue={getCustomerOverdue} formatCurrency={formatCurrency} />}
+                {activeTab === 'customers' && (
+                    <CustomersTab 
+                        customers={customers} 
+                        getCustomerBalance={getCustomerBalance} 
+                        getCustomerOverdue={getCustomerOverdue} 
+                        formatCurrency={formatCurrency} 
+                        onViewStatement={(customer) => {
+                            setSelectedCustomer(customer);
+                            setShowStatementModal(true);
+                        }}
+                    />
+                )}
             </div>
 
             {showPaymentModal && selectedInvoice && (
                 <PaymentModal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} invoice={selectedInvoice} recordPayment={recordPayment} showNotification={showNotification} />
             )}
             {showReportsModal && <ReportsModal isOpen={showReportsModal} onClose={() => setShowReportsModal(false)} getRevenueReport={getRevenueReport} />}
+            {showStatementModal && selectedCustomer && (
+                <CustomerStatementModal 
+                    isOpen={showStatementModal} 
+                    onClose={() => setShowStatementModal(false)} 
+                    customer={selectedCustomer} 
+                    formatCurrency={formatCurrency} 
+                />
+            )}
         </div>
     );
 };
