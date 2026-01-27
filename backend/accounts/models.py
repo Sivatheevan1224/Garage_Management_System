@@ -46,3 +46,25 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.email} ({self.role})"
+
+class PasswordResetOTP(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    otp_hash = models.CharField(max_length=128) # Store hashed OTP
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_used = models.BooleanField(default=False)
+
+    def set_otp(self, raw_otp):
+        from django.contrib.auth.hashers import make_password
+        self.otp_hash = make_password(raw_otp)
+
+    def check_otp(self, raw_otp):
+        from django.contrib.auth.hashers import check_password
+        return check_password(raw_otp, self.otp_hash)
+
+    def is_expired(self):
+        from django.utils import timezone
+        import datetime
+        return timezone.now() > self.created_at + datetime.timedelta(minutes=10)
+
+    class Meta:
+        db_table = 'password_reset_otps'

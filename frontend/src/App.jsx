@@ -6,6 +6,7 @@ import { GarageProvider, useGarage } from './context/GarageContext';
 import Home from './pages/Home';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import StaffDashboard from './pages/staff/StaffDashboard';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 // Check Auth Wrapper
 const ProtectedRoute = ({ children, role }) => {
@@ -36,6 +37,9 @@ function App() {
             </ProtectedRoute>
           } />
 
+
+          {/* Public Reset Password Page */}
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" />} />

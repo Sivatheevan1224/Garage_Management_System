@@ -3,7 +3,7 @@ import { X, Lock, Mail, AlertCircle, Eye, EyeOff } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { useGarage } from "../context/GarageContext"
 
-export function LoginModal({ open, onOpenChange, onSwitchToRegister }) {
+export function LoginModal({ open, onOpenChange, onSwitchToRegister, onSwitchToForgotPassword }) {
   const { login } = useGarage()
   const navigate = useNavigate()
   const [error, setError] = useState("")
@@ -168,6 +168,15 @@ export function LoginModal({ open, onOpenChange, onSwitchToRegister }) {
                 {fieldErrors.password}
               </p>
             )}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={onSwitchToForgotPassword}
+                className="text-xs text-accent hover:underline font-medium mt-1"
+              >
+                Forgot Password?
+              </button>
+            </div>
           </div>
 
           <button

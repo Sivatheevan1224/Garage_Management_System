@@ -252,6 +252,22 @@ CREATE TABLE `billing_settings` (
 INSERT INTO `billing_settings` (`id`, `tax_rate`, `invoice_prefix`, `next_invoice_number`, `service_prefix`, `next_service_number`, `payment_terms`, `company_name`, `company_address`, `company_city`, `company_phone`, `company_email`) VALUES
 (1, 0.1000, 'INV', 1001, 'SRV', 1001, 'Net 30', 'ProGarage', '123 Auto Lane', 'Mechanic City, MC 90210', '(555) 123-4567', 'billing@progarage.com');
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `password_reset_otps`
+--
+
+CREATE TABLE `password_reset_otps` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `otp_hash` varchar(128) NOT NULL,
+  `created_at` datetime(6) NOT NULL,
+  `is_used` tinyint(1) NOT NULL DEFAULT 0,
+  `user_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `password_reset_otps_user_id_fkey` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 --
 -- Constraints for dumped tables
 --
@@ -270,6 +286,9 @@ ALTER TABLE `invoices`
 
 ALTER TABLE `payments`
   ADD CONSTRAINT `payments_invoice_id_fkey` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`) ON DELETE CASCADE;
+
+ALTER TABLE `password_reset_otps`
+  ADD CONSTRAINT `password_reset_otps_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 COMMIT;
 

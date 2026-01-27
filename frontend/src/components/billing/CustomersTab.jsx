@@ -1,40 +1,61 @@
 
 import React from 'react';
-
-const CustomersTab = ({ customers, getCustomerBalance, getCustomerOverdue, formatCurrency }) => {
+const CustomersTab = ({ customers, getCustomerBalance, getCustomerOverdue, formatCurrency, onViewStatement }) => {
     return (
-        <div className="w-full bg-white">
-            <div className="p-4 border-b border-border">
-                <h3 className="font-bold text-foreground">Customer Account Balances</h3>
+        <div className="w-full h-full bg-white overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div>
+                    <h3 className="font-extrabold text-slate-900 text-lg">Customer Account Balances</h3>
+                    <p className="text-xs text-slate-500 font-medium">Tracking outstanding debt and individual customer statements</p>
+                </div>
             </div>
 
-            <div className="overflow-y-auto">
-                <table className="w-full">
-                    <thead className="bg-gray-50">
+            <div className="flex-1 overflow-y-auto">
+                <table className="w-full border-collapse">
+                    <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-100 shadow-sm">
                         <tr>
-                            <th className="text-left p-4">Customer</th>
-                            <th className="text-right p-4">Total Outstanding</th>
-                            <th className="text-right p-4 text-red-600">Overdue Balance</th>
-                            <th className="text-center p-4">Actions</th>
+                            <th className="text-left p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer Identity</th>
+                            <th className="text-right p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Outstanding</th>
+                            <th className="text-right p-5 text-[10px] font-black text-red-400 uppercase tracking-widest">Immediate Overdue</th>
+                            <th className="text-center p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {customers.map(customer => {
+                    <tbody className="divide-y divide-slate-100">
+                        {customers.length > 0 ? customers.map(customer => {
                             const balance = getCustomerBalance(customer.id);
                             return (
-                                <tr key={customer.id} className="border-b hover:bg-gray-50">
-                                    <td className="p-4">
-                                        <p className="font-medium">{customer.name}</p>
-                                        <p className="text-xs text-gray-500">{customer.email}</p>
+                                <tr key={customer.id} className="group hover:bg-slate-50/50 transition-all">
+                                    <td className="p-5">
+                                        <div className="flex flex-col">
+                                            <p className="font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors uppercase text-sm tracking-tight">{customer.name}</p>
+                                            <p className="text-xs text-slate-400 font-medium">{customer.email}</p>
+                                        </div>
                                     </td>
-                                    <td className="p-4 text-right font-bold">{formatCurrency(balance)}</td>
-                                    <td className="p-4 text-right font-bold text-red-600">{formatCurrency(getCustomerOverdue(customer.id))}</td>
-                                    <td className="p-4 text-center">
-                                        <button className="text-blue-600 hover:underline text-sm font-medium">View Statement</button>
+                                    <td className="p-5 text-right">
+                                        <p className="text-sm font-black text-slate-900 whitespace-nowrap">{formatCurrency(balance)}</p>
+                                    </td>
+                                    <td className="p-5 text-right">
+                                        <p className={`text-sm font-black whitespace-nowrap ${getCustomerOverdue(customer.id) > 0 ? 'text-red-600 animate-pulse' : 'text-slate-300'}`}>
+                                            {formatCurrency(getCustomerOverdue(customer.id))}
+                                        </p>
+                                    </td>
+                                    <td className="p-5 text-center">
+                                        <button 
+                                            onClick={() => onViewStatement(customer)}
+                                            className="px-4 py-2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-emerald-700 shadow-lg shadow-emerald-50 transition-all"
+                                        >
+                                            View Statement
+                                        </button>
                                     </td>
                                 </tr>
                             );
-                        })}
+                        }) : (
+                            <tr>
+                                <td colSpan="4" className="p-20 text-center text-slate-400 font-medium italic">
+                                    No customer records found in the database.
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>

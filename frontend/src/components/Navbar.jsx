@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react"
 import { Menu, X, Wrench } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import { LoginModal } from "./LoginModal"
 import { RegisterModal } from "./RegisterModal"
-
 export function Navbar() {
+  const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoginOpen, setIsLoginOpen] = useState(false)
   const [isRegisterOpen, setIsRegisterOpen] = useState(false)
@@ -143,6 +144,10 @@ export function Navbar() {
         onSwitchToRegister={() => {
           setIsLoginOpen(false)
           setIsRegisterOpen(true)
+        }}
+        onSwitchToForgotPassword={() => {
+          setIsLoginOpen(false)
+          navigate('/reset-password')
         }}
       />
       <RegisterModal
