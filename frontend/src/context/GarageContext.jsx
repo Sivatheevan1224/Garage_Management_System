@@ -1,36 +1,40 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import apiService, { handleApiError } from '../services/api.jsx';
 
+// Create Context for global state management
 const GarageContext = createContext();
 
+// Custom hook to access GarageContext
 export const useGarage = () => useContext(GarageContext);
 
 export const GarageProvider = ({ children }) => {
-  // --- Loading & Error State ---
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // Loading & Error State
+  const [loading, setLoading] = useState(true);  // Track if data is being fetched
+  const [error, setError] = useState(null);  // Store any error messages
 
-  // --- Notification State ---
+  // Notification State - for showing success/error messages to user
   const [notification, setNotification] = useState(null);
 
-  // --- Data State ---
-  const [customers, setCustomers] = useState([]);
-  const [vehicles, setVehicles] = useState([]);
-  const [services, setServices] = useState([]);
-  const [invoices, setInvoices] = useState([]);
-  const [payments, setPayments] = useState([]);
-  const [technicians, setTechnicians] = useState([]);
-  const [staffMembers, setStaffMembers] = useState([]);
-  const [billingSettings, setBillingSettings] = useState(null);
+  // Data State - stores all application data from backend
+  const [customers, setCustomers] = useState([]);  // All customers from database
+  const [vehicles, setVehicles] = useState([]);  // All vehicles
+  const [services, setServices] = useState([]);  // All service records
+  const [invoices, setInvoices] = useState([]);  // All invoices
+  const [payments, setPayments] = useState([]);  // All payments
+  const [technicians, setTechnicians] = useState([]);  // All technicians
+  const [staffMembers, setStaffMembers] = useState([]);  // All staff/admin users
+  const [billingSettings, setBillingSettings] = useState(null);  // Company billing config
+  
+  // Current logged-in user - persisted in localStorage
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('currentUser');
     return saved ? JSON.parse(saved) : null;
   });
 
-  // --- Normalization Helpers ---
+  // Normalization Helpers - ensure data is in consistent format
   const normalizeService = (s) => ({
     ...s,
-    cost: parseFloat(s.cost) || 0
+    cost: parseFloat(s.cost) || 0  // Convert cost to number
   });
 
   const normalizeInvoice = (inv) => ({
@@ -46,7 +50,7 @@ export const GarageProvider = ({ children }) => {
 
   const normalizePayment = (p) => ({
     ...p,
-    amount: parseFloat(p.amount) || 0
+    amount: parseFloat(p.amount) || 0  // Convert amount to number
   });
 
   const normalizeBillingSettings = (bs) => {
@@ -66,20 +70,20 @@ export const GarageProvider = ({ children }) => {
     };
   };
 
-  // --- Initial Data Fetching ---
+  // Initial Data Fetching - runs when app loads
   const fetchData = async () => {
     setLoading(true);
-    setNotification(null); // Clear notifications on data refresh
+    setNotification(null);  // Clear any existing notifications
     try {
+      // Fetch all data in parallel for better performance
       const fetchPromises = [
-
-
         apiService.customers.getAll(),
         apiService.vehicles.getAll(),
         apiService.services.getAll(),
         apiService.invoices.getAll(),
         apiService.payments.getAll(),
         apiService.technicians.getAll(),
+        // Only admins can fetch user list
         currentUser?.role === 'admin' ? apiService.users.getAll() : Promise.resolve({ data: [] }),
         apiService.billingSettings.getCurrent()
       ];
@@ -95,9 +99,7 @@ export const GarageProvider = ({ children }) => {
         billingRes
       ] = await Promise.all(fetchPromises);
 
-
-
-      // Standardized response returns data inside 'data' field
+      // Update all state with fetched data
       setCustomers(custRes.data);
       setVehicles(vehRes.data);
       setServices((servRes.data || []).map(normalizeService));
@@ -116,44 +118,45 @@ export const GarageProvider = ({ children }) => {
     }
   };
 
+  // Fetch data when component mounts
   useEffect(() => {
     fetchData();
   }, []);
 
-  // Save currentUser to localStorage for persistence across reloads
+  // Save currentUser to localStorage whenever it changes
   useEffect(() => { 
     if (currentUser) localStorage.setItem('currentUser', JSON.stringify(currentUser));
     else localStorage.removeItem('currentUser');
   }, [currentUser]);
 
-  // --- Actions ---
+  // Authentication Operations
 
-  // Auth Operations
+  // Login user with email and password
   const login = async (email, password) => {
     try {
-      setNotification(null); // Clear any leftover notifications before login
+      setNotification(null);  // Clear any previous notifications
       const response = await apiService.auth.login(email, password);
-      // Interceptor has unwrapped the data field
       if (response.status_overall === 'success' || response.data.user) {
         const userData = response.data.user || response.data;
-        setCurrentUser(userData);
-        fetchData();
+        setCurrentUser(userData);  // Set logged-in user
+        fetchData();  // Reload all data for this user
         return { success: true, user: userData };
       }
       return { success: false, message: response.message || 'Login failed' };
     } catch (err) {
-      // Extract error message from backend response
       const errorResult = handleApiError(err);
       console.error('Login error:', errorResult);
       return errorResult;
     }
   };
 
+  // Logout user and clear all state
   const logout = () => {
     setCurrentUser(null);
     setNotification(null);
   };
 
+  // Register new staff member (admin only)
   const registerStaff = async (data) => {
     try {
       const response = await apiService.auth.register(data);
@@ -166,6 +169,7 @@ export const GarageProvider = ({ children }) => {
     }
   };
 
+  // Remove staff member from system (admin only)
   const removeStaffMember = async (id) => {
     try {
       await apiService.users.delete(id);
@@ -176,12 +180,12 @@ export const GarageProvider = ({ children }) => {
     }
   };
 
+  // Approve pending staff member (admin only)
   const approveStaffMember = async (id) => {
       try {
-          // Pass current user id or a default
           const adminId = currentUser ? currentUser.id : 'admin';
           await apiService.auth.approveUser(id, adminId);
-          // Update local state
+          // Update staff member's status in local state
           setStaffMembers(prev => prev.map(s => s.id === id ? { ...s, is_approved: true } : s));
           return { success: true };
       } catch (err) {
@@ -189,6 +193,7 @@ export const GarageProvider = ({ children }) => {
       }
   };
 
+  // Deactivate staff member account (admin only)
   const deactivateStaffMember = async (id) => {
       try {
           await apiService.auth.deactivateUser(id);
@@ -199,17 +204,18 @@ export const GarageProvider = ({ children }) => {
       }
   };
 
+   // Update staff member's role (admin only)
    const updateUserRole = async (id, newRole) => {
       try {
           await apiService.users.update(id, { role: newRole });
-           // Update local state
-           setStaffMembers(prev => prev.map(s => s.id === id ? { ...s, role: newRole } : s));
-           return { success: true };
+          setStaffMembers(prev => prev.map(s => s.id === id ? { ...s, role: newRole } : s));
+          return { success: true };
       } catch(err) {
           return handleApiError(err);
       }
   };
 
+  // Request password reset email with OTP
   const requestPasswordReset = async (email) => {
     try {
       const response = await apiService.auth.requestPasswordReset(email);
@@ -219,6 +225,7 @@ export const GarageProvider = ({ children }) => {
     }
   };
 
+  // Verify OTP code from email
   const verifyOtp = async (email, otp) => {
     try {
       const response = await apiService.auth.verifyOtp(email, otp);
@@ -228,6 +235,7 @@ export const GarageProvider = ({ children }) => {
     }
   };
 
+  // Confirm password reset with OTP and new password
   const confirmPasswordReset = async (email, otp, password) => {
     try {
       const response = await apiService.auth.confirmPasswordReset(email, otp, password);
@@ -238,19 +246,23 @@ export const GarageProvider = ({ children }) => {
   };
 
   // Customer Operations
+
+  // Add new customer to database
   const addCustomer = async (customerData) => {
     try {
       const response = await apiService.customers.create(customerData);
-      setCustomers(prev => [...prev, response.data]);
+      setCustomers(prev => [...prev, response.data]);  // Add to local state immediately
       return { success: true, data: response.data };
     } catch (err) {
       return handleApiError(err);
     }
   };
 
+  // Update existing customer information
   const updateCustomer = async (id, updates) => {
     try {
       const response = await apiService.customers.update(id, updates);
+      // Update customer in local state
       setCustomers(prev => prev.map(c => c.id === id ? response.data : c));
       return { success: true, data: response.data };
     } catch (err) {
@@ -258,9 +270,11 @@ export const GarageProvider = ({ children }) => {
     }
   };
 
+  // Delete customer from database
   const deleteCustomer = async (id) => {
     try {
       await apiService.customers.delete(id);
+      // Remove from local state
       setCustomers(prev => prev.filter(c => c.id !== id));
       return { success: true };
     } catch (err) {

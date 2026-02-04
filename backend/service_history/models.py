@@ -3,38 +3,65 @@ from django.utils import timezone
 import json
 
 class Customer(models.Model):
-    # Standard auto-incrementing ID
-    name = models.CharField(max_length=100)
+    """
+    Customer Model - Stores client information for the garage
+    This creates the 'customers' table in MySQL database
+    """
+    
+    # Primary identification field (auto-incrementing ID is automatic)
+    name = models.CharField(max_length=100)  # Customer's full name
+    
+    # National Identity Card number - unique to prevent duplicates
     nic = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    
+    # Email field with unique constraint - ensures one account per email
     email = models.EmailField(unique=True)
-    phone = models.CharField(max_length=20)
-    address = models.TextField(null=True, blank=True)
+    
+    # Contact information
+    phone = models.CharField(max_length=20)  # Phone number
+    address = models.TextField(null=True, blank=True)  # Full address
+    
+    # Timestamp - automatically set when customer is created
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'customers'
+        db_table = 'customers'  # MySQL table name
 
     def __str__(self):
+        # String representation for admin panel and debugging
         return self.name
 
 
 class Vehicle(models.Model):
-    # Standard auto-incrementing ID
+    """
+    Vehicle Model - Stores vehicle information linked to customers
+    Each vehicle belongs to one customer (Foreign Key relationship)
+    """
+    
+    # Foreign Key to Customer - links vehicle to its owner
+    # CASCADE means: if customer is deleted, their vehicles are also deleted
+    # related_name='vehicles' allows: customer.vehicles.all()
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='vehicles')
-    brand = models.CharField(max_length=50)
-    model = models.CharField(max_length=50)
-    year = models.CharField(max_length=4)
-    number = models.CharField(max_length=20, unique=True)
+    
+    # Vehicle identification fields
+    brand = models.CharField(max_length=50)  # e.g., Toyota, Honda
+    model = models.CharField(max_length=50)  # e.g., Corolla, Civic
+    year = models.CharField(max_length=4)    # Manufacturing year
+    number = models.CharField(max_length=20, unique=True)  # License plate (unique)
+    
+    # Optional vehicle details
     color = models.CharField(max_length=30, null=True, blank=True)
-    fuel_type = models.CharField(max_length=20, default='Petrol')
-    mileage = models.IntegerField(default=0)
+    fuel_type = models.CharField(max_length=20, default='Petrol')  # Petrol/Diesel/Electric
+    mileage = models.IntegerField(default=0)  # Current odometer reading
 
+    # Timestamp
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'vehicles'
+        db_table = 'vehicles'  # MySQL table name
 
     def __str__(self):
+        # Display format: "ABC-1234 - Toyota Corolla"
         return f"{self.number} - {self.brand} {self.model}"
 
 

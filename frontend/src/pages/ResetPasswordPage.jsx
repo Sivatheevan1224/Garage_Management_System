@@ -3,26 +3,37 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { Lock, AlertCircle, CheckCircle2, Eye, EyeOff, Wrench, ArrowLeft, Key, Mail } from "lucide-react"
 import { useGarage } from "../context/GarageContext"
 
+// Password reset page: Email → OTP → New Password (3 steps)
 export default function ResetPasswordPage() {
+  // Navigation hooks
   const navigate = useNavigate()
   const location = useLocation()
+  // Get auth functions from context
   const { requestPasswordReset, verifyOtp, confirmPasswordReset } = useGarage()
   
-  // Try to get email from navigation state if redirected from forgot password
+  // Email from previous page or user input
   const [email, setEmail] = useState(location.state?.email || "")
-  const [step, setStep] = useState(email ? 2 : 1) // 1: Email, 2: OTP, 3: New Password
+  // Step 1: Email, Step 2: OTP, Step 3: New Password
+  const [step, setStep] = useState(email ? 2 : 1)
   
+  // Store OTP code entered by user
   const [otp, setOtp] = useState("")
+  // Store password and confirm password
   const [formData, setFormData] = useState({
     password: "",
     confirmPassword: "",
   })
   
+  // Show/hide password toggle
   const [showPassword, setShowPassword] = useState(false)
+  // Error message from API
   const [error, setError] = useState("")
+  // Success flag after reset complete
   const [success, setSuccess] = useState(false)
+  // Loading state for buttons
   const [loading, setLoading] = useState(false)
 
+  // Step 1: Send OTP to email
   const handleRequestOtp = async (e) => {
     e.preventDefault()
     setError("")
@@ -34,9 +45,10 @@ export default function ResetPasswordPage() {
     
     setLoading(true)
     try {
+        // Call API to send OTP
         const result = await requestPasswordReset(email)
         if (result.success) {
-            setStep(2)
+            setStep(2) // Move to OTP verification
         } else {
             setError(result.message || "Failed to send OTP")
         }
@@ -47,31 +59,36 @@ export default function ResetPasswordPage() {
     }
   }
 
+  // Step 2: Verify OTP code
   const handleVerify = async (e) => {
     e.preventDefault()
     setError("")
     if (otp.length !== 6) return setError("Please enter 6-digit OTP")
     
     setLoading(true)
+    // Call API to verify OTP
     const res = await verifyOtp(email, otp)
     setLoading(false)
     
-    if (res.success) setStep(3)
+    if (res.success) setStep(3) // Move to password reset
     else setError(res.message || "Invalid OTP")
   }
 
+  // Step 3: Reset password with new one
   const handleReset = async (e) => {
     e.preventDefault()
     setError("")
     
+    // Validate password requirements
     if (formData.password.length < 8) return setError("Password must be at least 8 characters")
     if (formData.password !== formData.confirmPassword) return setError("Passwords do not match")
     
     setLoading(true)
+    // Call API to reset password
     const res = await confirmPasswordReset(email, otp, formData.password)
     setLoading(false)
     
-    if (res.success) setSuccess(true)
+    if (res.success) setSuccess(true) // Show success screen
     else setError(res.message || "Reset failed")
   }
 

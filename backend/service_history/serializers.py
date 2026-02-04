@@ -1,36 +1,63 @@
+"""
+==============================================================
+SERIALIZERS
+==============================================================
+Serializers convert between Python objects and JSON format.
+
+They also validate data before saving:
+- Check if email is unique
+- Check if phone format is valid
+- Check if required fields exist
+- Handle data type conversions
+
+This keeps validation logic separate from models.
+==============================================================
+"""
+
 from rest_framework import serializers
 from .models import Customer, Vehicle, Technician, Service, Invoice, Payment, BillingSetting
 from decimal import Decimal
 import uuid
 
 class CustomerSerializer(serializers.ModelSerializer):
+    # Validate and convert Customer data to/from JSON
+    
     class Meta:
-        model = Customer
+        model = Customer  # Link to Customer model
         fields = ['id', 'name', 'nic', 'email', 'phone', 'address', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'created_at']  # These fields cannot be set by API
         extra_kwargs = {
+            # NIC is optional - can be blank or null
             'nic': {'required': False, 'allow_blank': True, 'allow_null': True},
+            # Address is optional
             'address': {'required': False, 'allow_blank': True, 'allow_null': True}
         }
     
     def validate_email(self, value):
+        # Check if email already exists in database
+        # If updating existing customer, skip if email hasn't changed
         if self.instance and self.instance.email == value:
             return value
+        # Check if another customer already has this email
         if Customer.objects.filter(email=value).exists():
             raise serializers.ValidationError("A customer with this email already exists.")
         return value
     
     def validate_nic(self, value):
-        if not value:
+        # Check if NIC already exists in database
+        if not value:  # NIC is optional
             return value
+        # If updating, skip if NIC hasn't changed
         if self.instance and self.instance.nic == value:
             return value
+        # Check for duplicate NIC
         if Customer.objects.filter(nic=value).exists():
             raise serializers.ValidationError("A customer with this NIC already exists.")
         return value
 
 
 class VehicleSerializer(serializers.ModelSerializer):
+    # Validate and convert Vehicle data, ensure registration number is unique
     customerId = serializers.PrimaryKeyRelatedField(
         queryset=Customer.objects.all(), 
         source='customer'
@@ -56,6 +83,7 @@ class VehicleSerializer(serializers.ModelSerializer):
 
 
 class TechnicianSerializer(serializers.ModelSerializer):
+    # Technician info with workload (count of pending services)
     workload = serializers.SerializerMethodField()
     
     class Meta:
@@ -68,6 +96,7 @@ class TechnicianSerializer(serializers.ModelSerializer):
 
 
 class ServiceSerializer(serializers.ModelSerializer):
+    # Service data with auto-invoice on advance payment received
     vehicleId = serializers.PrimaryKeyRelatedField(queryset=Vehicle.objects.all(), source='vehicle')
     technicianId = serializers.PrimaryKeyRelatedField(queryset=Technician.objects.all(), source='technician', allow_null=True, required=False)
     estimatedHours = serializers.DecimalField(source='estimated_hours', max_digits=5, decimal_places=2, required=False, default=0)
@@ -113,10 +142,24 @@ class ServiceSerializer(serializers.ModelSerializer):
 
         settings = BillingSetting.objects.first()
         tax_rate = settings.tax_rate if settings else Decimal('0.1000')
+        prefix = settings.invoice_prefix if settings else "INV"
         
-        # Simple numeric invoice number or prefix+id
-        count = Invoice.objects.count() + 1
-        invoice_number = f"INV-{1000 + count}"
+        # Generate unique invoice number by finding the highest existing number
+        existing_invoices = Invoice.objects.filter(
+            invoice_number__startswith=prefix
+        ).order_by('-invoice_number').first()
+        
+        if existing_invoices:
+            # Extract number from last invoice (e.g., "INV-1005" -> 1005)
+            try:
+                last_num = int(existing_invoices.invoice_number.split('-')[-1])
+                next_num = last_num + 1
+            except (ValueError, IndexError):
+                next_num = 1001
+        else:
+            next_num = 1001
+        
+        invoice_number = f"{prefix}-{next_num}"
 
         cost = Decimal(str(service.cost))
         tax_included = service.tax_included
@@ -236,6 +279,7 @@ class ServiceSerializer(serializers.ModelSerializer):
 
 
 class InvoiceSerializer(serializers.ModelSerializer):
+    # Invoice data with auto-calculation of tax, discount, and balance due
     invoiceNumber = serializers.CharField(source='invoice_number', required=False)
     serviceId = serializers.PrimaryKeyRelatedField(queryset=Service.objects.all(), source='service')
     customerId = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), source='customer', required=False)
@@ -291,9 +335,24 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
         if 'invoice_number' not in validated_data:
             settings = BillingSetting.objects.first()
-            count = Invoice.objects.count() + 1
             prefix = settings.invoice_prefix if settings else "INV"
-            validated_data['invoice_number'] = f"{prefix}-{1000 + count}"
+            
+            # Generate unique invoice number by finding the highest existing number
+            existing_invoices = Invoice.objects.filter(
+                invoice_number__startswith=prefix
+            ).order_by('-invoice_number').first()
+            
+            if existing_invoices:
+                # Extract number from last invoice (e.g., "INV-1005" -> 1005)
+                try:
+                    last_num = int(existing_invoices.invoice_number.split('-')[-1])
+                    next_num = last_num + 1
+                except (ValueError, IndexError):
+                    next_num = 1001
+            else:
+                next_num = 1001
+            
+            validated_data['invoice_number'] = f"{prefix}-{next_num}"
         
         if 'due_date' not in validated_data:
             validated_data['due_date'] = timezone.now() + timedelta(days=30)
@@ -342,6 +401,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
 
 class PaymentSerializer(serializers.ModelSerializer):
+    # Payment transactions linked to invoices
     invoiceId = serializers.PrimaryKeyRelatedField(queryset=Invoice.objects.all(), source='invoice')
     
     class Meta:
@@ -350,6 +410,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 
 
 class BillingSettingSerializer(serializers.ModelSerializer):
+    # Store billing settings (tax rate, invoice prefix, company info)
     taxRate = serializers.DecimalField(source='tax_rate', max_digits=5, decimal_places=4)
     invoicePrefix = serializers.CharField(source='invoice_prefix')
     nextInvoiceNumber = serializers.IntegerField(source='next_invoice_number')
