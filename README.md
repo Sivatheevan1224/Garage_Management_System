@@ -146,15 +146,3 @@ npm run dev
 ✅ Frontend running at `http://localhost:5173`
 
 ---
-
-## 📸 Screen Gallery
-
-| Login Portal | Admin Dashboard |
-| :---: | :---: |
-| ![Login](https://via.placeholder.com/500x300?text=Login+Portal) | ![Dashboard](https://via.placeholder.com/500x300?text=Admin+Dashboard) |
-
-| Service Tracking | Invoice Generation |
-| :---: | :---: |
-| ![Services](https://via.placeholder.com/500x300?text=Service+Tracking) | ![Invoice](https://via.placeholder.com/500x300?text=Professional+Invoice) |
-
----
