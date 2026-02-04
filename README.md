@@ -4,20 +4,30 @@
 [![React](https://img.shields.io/badge/React-18.0-61dafb.svg?logo=react&logoColor=black)](https://reactjs.org)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0-orange.svg?logo=mysql&logoColor=white)](https://mysql.com)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38bdf8.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**ProGarage** is a professional-grade, full-stack application designed to digitize and automate the operations of modern automotive service centers. It offers a seamless workflow from vehicle reception to final invoicing, ensuring efficiency and financial accuracy.
+**ProGarage** is a collaborative, professional-grade, full-stack application designed to digitize and automate the operations of modern automotive service centers. Developed as a **Group Project**, it offers a seamless workflow from vehicle reception to final invoicing, ensuring efficiency and financial accuracy.
 
+---
 
+## 👥 Meet the Team
+
+| Team Member | Role | GitHub |
+| :--- | :--- | :--- |
+| **Sivatheevan** | Full Stack Developer | [@Sivatheevan1224](https://github.com/Sivatheevan1224) |
+| **Member 2 Name** | Frontend/Backend | [@username](https://github.com/) |
+| **Member 3 Name** | Frontend/Backend | [@username](https://github.com/) |
+| **Member 4 Name** | Documentation/QA | [@username](https://github.com/) |
+
+*(Please update the names and roles to reflect your team's composition)*
 
 ---
 
 ## 🚀 Key Features
 
-### � Customer & Vehicle Management
+### 👤 Customer & Vehicle Management
 - **Centralized Database**: Store comprehensive customer profiles including NIC, contact details, and address.
 - **Vehicle Profiles**: Link multiple vehicles to a single customer with details like Brand, Model, Year, VIN/Plate Number, Fuel Type, and Mileage.
-- **History Tracking**: instant access to a vehicle's entire service history.
+- **History Tracking**: Instant access to a vehicle's entire service history.
 
 ### 🛠️ Service Workflow Automation
 - **Job Cards**: Create service records with detailed descriptions, estimated hours, and cost projections.
