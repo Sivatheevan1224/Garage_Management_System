@@ -9,19 +9,6 @@
 
 ---
 
-## 👥 Meet the Team
-
-| Team Member | Role | GitHub |
-| :--- | :--- | :--- |
-| **Sivatheevan** | Full Stack Developer | [@Sivatheevan1224](https://github.com/Sivatheevan1224) |
-| **Member 2 Name** | Frontend/Backend | [@username](https://github.com/) |
-| **Member 3 Name** | Frontend/Backend | [@username](https://github.com/) |
-| **Member 4 Name** | Documentation/QA | [@username](https://github.com/) |
-
-*(Please update the names and roles to reflect your team's composition)*
-
----
-
 ## 🚀 Key Features
 
 ### 👤 Customer & Vehicle Management
