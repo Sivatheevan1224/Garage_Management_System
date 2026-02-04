@@ -1,195 +1,172 @@
-# ProGarage - Garage Management System
+# 🔧 ProGarage - Advanced Garage Management System
 
-[![Django](https://img.shields.io/badge/Django-6.0-092e20.svg?logo=django&logoColor=white)](https://www.djangoproject.com/)
-[![React](https://img.shields.io/badge/React-18.0%2B-61dafb.svg?logo=react&logoColor=black)](https://reactjs.org)
-[![MySQL](https://img.shields.io/badge/MySQL-8.0%2B-orange.svg?logo=mysql&logoColor=white)](https://mysql.com)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind--CSS-3.4-38bdf8.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
+[![Django](https://img.shields.io/badge/Django-5.0-092e20.svg?logo=django&logoColor=white)](https://www.djangoproject.com/)
+[![React](https://img.shields.io/badge/React-18.0-61dafb.svg?logo=react&logoColor=black)](https://reactjs.org)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0-orange.svg?logo=mysql&logoColor=white)](https://mysql.com)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38bdf8.svg?logo=tailwind-css&logoColor=white)](https://tailwindcss.com)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-ProGarage is a comprehensive **Garage Customer and Vehicle Information Management System** designed to streamline garage operations. It provides a robust platform for managing customer records, vehicle information, service histories, billing, and staff workflows.
+**ProGarage** is a professional-grade, full-stack application designed to digitize and automate the operations of modern automotive service centers. It offers a seamless workflow from vehicle reception to final invoicing, ensuring efficiency and financial accuracy.
 
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- MySQL/MariaDB (XAMPP recommended)
-
-### Installation Steps
-
-#### 1. Clone Repository
-```bash
-git clone <repository-url>
-cd Garage_Customer_and_Vehicle_Information_Management_System
-```
-
-#### 2. Database Setup
-```bash
-# Start MySQL (via XAMPP or service)
-# Open MySQL client and run:
-CREATE DATABASE garage_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-# Import the SQL file
-mysql -u root -p garage_db < garage_db.sql
-```
-
-#### 3. Backend Setup
-```bash
-cd backend
-
-# Create virtual environment
-python -m venv .venv
-
-# Activate virtual environment
-# Windows:
-.venv\Scripts\activate
-# Linux/Mac:
-source .venv/bin/activate
-
-# Install dependencies
-pip install django djangorestframework django-cors-headers mysql-connector-python
-
-# Run migrations (creates Django system tables)
-python manage.py migrate
-
-# Start Django server
-python manage.py runserver
-```
-
-Backend will run at: **http://localhost:8000**
-
-#### 4. Frontend Setup
-```bash
-# Open new terminal
-cd frontend
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-```
-
-Frontend will run at: **http://localhost:5173**
-
-### 🎯 Access the Application
-Open your browser and go to: **http://localhost:5173**
+![ProGarage Dashboard Preview](https://via.placeholder.com/1200x600?text=ProGarage+Dashboard+Preview)
+*(Replace this link with an actual screenshot of your dashboard)*
 
 ---
 
-## 🏗️ Project Architecture
+## 🚀 Key Features
 
-The system follows a modern **Decoupled Architecture** with a clear separation between the frontend and backend.
+### � Customer & Vehicle Management
+- **Centralized Database**: Store comprehensive customer profiles including NIC, contact details, and address.
+- **Vehicle Profiles**: Link multiple vehicles to a single customer with details like Brand, Model, Year, VIN/Plate Number, Fuel Type, and Mileage.
+- **History Tracking**: instant access to a vehicle's entire service history.
+
+### 🛠️ Service Workflow Automation
+- **Job Cards**: Create service records with detailed descriptions, estimated hours, and cost projections.
+- **Status Tracking**: Monitor jobs through customizable stages:
+  - ⏳ **Pending**: Job created, waiting for start.
+  - ⚙️ **In Progress**: Technician assigned and working.
+  - ✅ **Completed**: Job finished, ready for billing.
+- **Technician Assignment**: Allocate jobs to specific technicians based on workload and specialization.
+
+### 💰 Billing & Financial Control
+- **Smart Invoicing**: Automatically generate invoices from completed service records.
+  - **Tax Calculation**: Configurable global tax rates.
+  - **Discounts**: Apply manual discounts directly on the invoice.
+  - **Advance Payments**: Handle deposits and partial payments with ease.
+- **Customer Statements**: Generate detailed financial statements showing all invoices, payments, and outstanding balances for any customer.
+- **Payment Tracking**: Record payments via Cash, Card, Cheque, or Bank Transfer.
+- **PDF Export**: Generate professional PDF invoices and reports instantly using `jsPDF` and `html2canvas`.
+
+### 🔐 Security & Administration
+- **Role-Based Access Control (RBAC)**:
+  - 🛡️ **Admin Portal**: Full system control, staff approval, financial reports, and settings management.
+  - 👷 **Staff Portal**: Focused interface for daily operations (bookings, updates) without sensitive administrative access.
+- **Staff Approval**: Strict "Approve-to-Access" workflow for new staff registrations.
+
+### 📊 Analytics & Reporting
+- **Dynamic Dashboards**: Interactive charts using `Recharts` to visualize:
+  - Monthly Revenue Trends
+  - Service Status Distribution
+  - Technician Performance
+- **Exportable Reports**: Download financial and operational data for offline analysis.
+
+---
+
+## 🏗️ Technical Architecture
+
+The system is built on a **Decoupled Architecture**, ensuring the frontend and backend can evolve independently.
 
 ```mermaid
 graph TD
-    User([User / Staff]) <--> Frontend[React Frontend - Vite]
-    Frontend <--> API[Django REST API]
-    API <--> DB[(MySQL Database)]
-    API <--> Auth[JWT/Session Auth]
+    User([🖥️ Client Browser]) <-->|JSON / REST API| API[⚙️ Django REST Framework]
+    API <-->|Query| DB[(🗄️ MySQL Database)]
     
     subgraph "Frontend Layer"
-        Frontend
+        React[React + Vite]
+        Tailwind[Tailwind CSS]
+        State[Context API]
     end
-    
+
     subgraph "Backend Layer"
-        API
-        Auth
-    end
-    
-    subgraph "Data Layer"
-        DB
+        Django[Django Core]
+        Serializer[Serializers]
+        Auth[JWT / Session Auth]
     end
 ```
 
----
+### 💻 Technology Stack
 
-## 🚀 Tech Stack
-
-### Frontend
-- **Framework**: [React](https://reactjs.org/) (via Vite)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **Icons**: [Lucide React](https://lucide.dev/)
-- **State Management**: React Context API
-- **Routing**: React Router DOM
-
-### Backend
-- **Framework**: [Django](https://www.djangoproject.com/)
-- **API**: [Django REST Framework](https://www.django-rest-framework.org/)
-- **Database**: [MySQL](https://www.mysql.com/) (XAMPP/Direct)
-- **Authentication**: Custom Session/Role-based approval
+| Domain | Technolgies |
+| :--- | :--- |
+| **Frontend** | **React 18** (Vite), **Tailwind CSS**, `Lucide React` (Icons), `Recharts` (Charts), `Axios`, `jsPDF`, `html2canvas` |
+| **Backend** | **Python 3.10+**, **Django 5.0**, **Django REST Framework (DRF)**, `mysql-connector-python` |
+| **Database** | **MySQL 8.0** (XAMPP recommended) |
+| **Dev Tools** | Git, VS Code, Postman |
 
 ---
 
-## ✨ Key Features
+## ⚙️ Installation Guide
 
-- **👤 Customer Management**: Comprehensive tracking of customer details, contact info, and linked vehicles.
-- **🚗 Vehicle Tracking**: Manage vehicle models, brands, registration numbers, and service history.
-- **🛠️ Service Management**: Complete lifecycle of vehicle services, from pending to completed, with technician assignments.
-- **🧾 Billing & Invoicing**: Automated invoice generation, tax calculation, and payment status tracking.
-- **👥 Staff Workflow**: Role-based access (Admin/Staff) with a registration approval system.
-- **📊 Real-time Dashboard**: Overview of recent activities, service status, and management metrics.
+Follow these steps to deploy ProGarage locally.
 
----
+### 1. Prerequisites
+- **Python** 3.10 or higher
+- **Node.js** 18 or higher
+- **MySQL** (via XAMPP or standalone installation)
 
-## 📁 Project Structure
+### 2. Database Configuration
+1. Start your MySQL Server (e.g., via XAMPP Control Panel).
+2. Create the empty database:
+   ```sql
+   CREATE DATABASE garage_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```
+3. (Optional) If you have the `garage_db.sql` file, import it to seed data:
+   ```bash
+   mysql -u root -p garage_db < garage_db.sql
+   ```
 
-```text
-.
-├── backend/                # Django Backend
-│   ├── garage_backend/     # Project Settings & URLs
-│   ├── service_history/    # Core App (Models, Views, Serializers)
-│   ├── accounts/           # User Authentication App
-│   ├── utils/              # Helper utilities
-│   └── manage.py           # Django CLI
-├── frontend/               # React Frontend
-│   ├── src/
-│   │   ├── components/     # Reusable UI Elements
-│   │   ├── context/        # Global State Management
-│   │   ├── pages/          # Full Page Views (Admin/Staff)
-│   │   └── services/       # API Integration
-│   ├── package.json        # Dependencies
-│   └── vite.config.js      # Vite Settings
-└── garage_db.sql           # Database Schema with Sample Data
-```
-
----
-
-## ⚙️ Daily Development
-
-### Start Backend
+### 3. Backend Setup
 ```bash
+# 1. Navigate to backend directory
 cd backend
-.venv\Scripts\activate    # Windows
-# or: source .venv/bin/activate  # Linux/Mac
+
+# 2. Create virtual environment
+python -m venv .venv
+
+# 3. Activate virtual environment
+# Windows:
+.venv\Scripts\activate
+# Mac/Linux:
+source .venv/bin/activate
+
+# 4. Install dependencies
+pip install -r requirements.txt
+# If requirements.txt is missing, run:
+# pip install django djangorestframework django-cors-headers mysql-connector-python
+
+# 5. Run Database Migrations
+python manage.py migrate
+
+# 6. Start the Server
 python manage.py runserver
 ```
+✅ Backend running at `http://127.0.0.1:8000`
 
-### Start Frontend
+### 4. Frontend Setup
 ```bash
+# Open a new terminal
+# 1. Navigate to frontend directory
 cd frontend
+
+# 2. Install Node dependencies
+npm install
+
+# 3. Start Development Server
 npm run dev
 ```
+✅ Frontend running at `http://localhost:5173`
 
 ---
 
-## 🔐 User Roles
+## 📸 Screen Gallery
 
-| Role | Permissions |
-| :--- | :--- |
-| **Admin** | Full system access, approve new staff, delete records, view all billing. |
-| **Staff** | Create/Update customers, vehicles, and services; view dashboard. |
+| Login Portal | Admin Dashboard |
+| :---: | :---: |
+| ![Login](https://via.placeholder.com/500x300?text=Login+Portal) | ![Dashboard](https://via.placeholder.com/500x300?text=Admin+Dashboard) |
 
----
-
-## 📜 License
-This project is for educational and management purposes. All rights reserved.
+| Service Tracking | Invoice Generation |
+| :---: | :---: |
+| ![Services](https://via.placeholder.com/500x300?text=Service+Tracking) | ![Invoice](https://via.placeholder.com/500x300?text=Professional+Invoice) |
 
 ---
 
-## 📞 Contact & Support
+## 🤝 Contributing & License
 
-For issues, questions, or contributions, please open an issue on the repository.
+This project is intended for educational and portfolio purposes.
 
-**Note:** Make sure to change the `SECRET_KEY` in `backend/garage_backend/settings.py` before deploying to production!
+- **License**: MIT License (See `LICENSE` file)
+- **Support**: For issues, please create a GitHub Issue.
+
+### Credits
+- Developed by **Sivatheevan**
+- Icons by [Lucide](https://lucide.dev/)
