@@ -8,8 +8,7 @@
 
 **ProGarage** is a professional-grade, full-stack application designed to digitize and automate the operations of modern automotive service centers. It offers a seamless workflow from vehicle reception to final invoicing, ensuring efficiency and financial accuracy.
 
-![ProGarage Dashboard Preview](https://via.placeholder.com/1200x600?text=ProGarage+Dashboard+Preview)
-*(Replace this link with an actual screenshot of your dashboard)*
+
 
 ---
 
@@ -159,14 +158,3 @@ npm run dev
 | ![Services](https://via.placeholder.com/500x300?text=Service+Tracking) | ![Invoice](https://via.placeholder.com/500x300?text=Professional+Invoice) |
 
 ---
-
-## 🤝 Contributing & License
-
-This project is intended for educational and portfolio purposes.
-
-- **License**: MIT License (See `LICENSE` file)
-- **Support**: For issues, please create a GitHub Issue.
-
-### Credits
-- Developed by **Sivatheevan**
-- Icons by [Lucide](https://lucide.dev/)
