@@ -5,41 +5,63 @@ import { Plus, Search, Edit, Trash2, X, AlertCircle } from 'lucide-react';
 
 
 const CustomerManagement = () => {
-    const { customers, addCustomer, updateCustomer, deleteCustomer, notification, closeNotification, showNotification, showConfirmation } = useGarage();
-    const [searchTerm, setSearchTerm] = useState('');
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingCustomer, setEditingCustomer] = useState(null);
+    // Get global state and functions from Context API
+    const { 
+        customers,           // Array of all customers from database
+        addCustomer,         // Function to create new customer
+        updateCustomer,      // Function to update existing customer
+        deleteCustomer,      // Function to delete customer
+        notification,        // Global notification state
+        closeNotification,   // Function to close notification
+        showNotification,    // Function to show notification message
+        showConfirmation     // Function to show confirmation dialog
+    } = useGarage();
+    
+    // Local component state for UI control
+    const [searchTerm, setSearchTerm] = useState('');  // Search input value
+    const [isModalOpen, setIsModalOpen] = useState(false);  // Modal visibility (true/false)
+    const [editingCustomer, setEditingCustomer] = useState(null);  // Customer being edited (null = adding new)
+    const [error, setError] = useState('');  // Form error message
 
-    // Form State
+    // Form data state - holds all input field values
     const [formData, setFormData] = useState({
-        name: '', nic: '', phone: '', email: '', address: ''
+        name: '', 
+        nic: '', 
+        phone: '', 
+        email: '', 
+        address: ''
     });
 
+    // Filter customers based on search term (searches name, phone, and NIC)
     const filteredCustomers = customers.filter(c => 
         c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         c.phone.includes(searchTerm) ||
         c.nic.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const [error, setError] = useState('');
-
+    // Handle form submission - either add new or update existing customer
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError('');
+        e.preventDefault();  // Prevent page reload on form submit
+        setError('');  // Clear any previous error messages
         try {
             if (editingCustomer) {
+                // Editing existing customer
                 await updateCustomer(editingCustomer.id, formData);
             } else {
+                // Adding new customer
                 await addCustomer(formData);
             }
-            closeModal();
+            closeModal();  // Close modal on successful save
         } catch (err) {
+            // Show error message if save operation fails
             setError('Failed to save customer. Please try again.');
         }
     };
 
+    // Open modal for adding new or editing existing customer
     const openModal = (customer = null) => {
         if (customer) {
+            // Edit mode - populate form with existing customer data
             setEditingCustomer(customer);
             setFormData({
                 name: customer.name || '',
@@ -49,12 +71,14 @@ const CustomerManagement = () => {
                 address: customer.address || ''
             });
         } else {
+            // Add mode - clear form for new customer
             setEditingCustomer(null);
             setFormData({ name: '', nic: '', phone: '', email: '', address: '' });
         }
-        setIsModalOpen(true);
+        setIsModalOpen(true);  // Show the modal
     };
 
+    // Close modal and reset all modal-related state
     const closeModal = () => {
         setIsModalOpen(false);
         setEditingCustomer(null);
